@@ -1,0 +1,63 @@
+﻿apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cronjob-generar-reporte
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: cronjob-generar-reporte
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: generator
+            image: postgres:16-alpine
+            # Antes: host "sa-platform-postgresql" (ya no existe, se
+            # dividió en 6 bases) y password en texto plano en el YAML.
+            # Ahora: usa DATABASE_URL_DOCENTES del Secret compartido —
+            # misma tabla "docentes" que consultaba, pero desde su base
+            # propia (docentes_db en sa-platform-postgresql-docentes),
+            # sin credenciales versionadas en el repo.
+            env:
+              - name: DATABASE_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: sa-platform-secrets
+                    key: DATABASE_URL_DOCENTES
+            command: ["/bin/sh", "-c"]
+            args:
+            - |
+              echo "==> Generando reporte consolidado de la plataforma..."
+              psql "$DATABASE_URL" -c "SELECT count(*) FROM docentes;"
+              echo "Reporte generado exitosamente."
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cronjob-limpiar-auditoria
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: cronjob-limpiar-auditoria
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: cleaner
+            image: alpine:3.19
+            command: ["/bin/sh", "-c"]
+            args:
+            - |
+              echo "==> Ejecutando mantenimiento y limpieza de logs/auditorías obsoletas..."
+              sleep 2
+              echo "Mantenimiento finalizado."

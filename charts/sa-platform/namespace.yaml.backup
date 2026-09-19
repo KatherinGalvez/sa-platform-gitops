@@ -1,0 +1,15 @@
+{{/*
+El namespace "sa-p5" lo crea el propio chart (no `kubectl create namespace`
+manual), cumpliendo el requisito explícito del enunciado. En la práctica,
+también se recomienda pasar `--create-namespace` al hacer `helm install`
+como respaldo (Helm valida el namespace destino antes de renderizar
+templates), pero este objeto documenta y garantiza que el namespace forma
+parte del release administrado por Helm.
+*/}}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/part-of: sa-platform

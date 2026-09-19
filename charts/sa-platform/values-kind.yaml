@@ -1,0 +1,60 @@
+# values-kind.yaml — overrides para el despliegue EFÍMERO en el clúster
+# kind que crea el propio pipeline de GitHub Actions (P7). Este clúster
+# vive solo mientras corre el job — no hay nodos reales que dimensionar
+# con cuidado como en GKE, el runner de GitHub ya trae suficiente CPU/RAM
+# para un solo despliegue de prueba.
+#
+# Las imágenes NO se referencian aquí (van vía --set en el propio
+# workflow, con el owner/tag calculados en tiempo de ejecución) — este
+# archivo solo trae los ajustes que sí son fijos.
+
+api-gateway:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  image:
+    pullPolicy: Never   # la imagen ya se inyectó al nodo con "kind load docker-image"
+  # Nada de LoadBalancer aquí — kind no tiene integración con un balanceador
+  # de nube real. Se verifica con "kubectl port-forward" dentro del propio job.
+
+auth-service:
+  replicaCount: 1
+  autoscaling: { enabled: false }
+  image: { pullPolicy: Never }
+
+authorization-service:
+  replicaCount: 1
+  autoscaling: { enabled: false }
+  image: { pullPolicy: Never }
+
+cursos-service:
+  replicaCount: 1
+  autoscaling: { enabled: false }
+  image: { pullPolicy: Never }
+
+inscripciones-service:
+  replicaCount: 1
+  autoscaling: { enabled: false }
+  image: { pullPolicy: Never }
+
+docentes-service:
+  replicaCount: 1
+  autoscaling: { enabled: false }
+  image: { pullPolicy: Never }
+
+calificaciones-service:
+  replicaCount: 1
+  autoscaling: { enabled: false }
+  image: { pullPolicy: Never }
+
+notas-consumer:
+  replicaCount: 1
+  autoscaling: { enabled: false }
+  image: { pullPolicy: Never }
+
+# Sin Ingress local (sa-academia.local no aplica en un runner efímero)
+ingress:
+  enabled: false
+
+# kind trae su propio StorageClass por defecto ("standard", provisionador
+# local-path) — no hace falta especificar nada, a diferencia de GKE.

@@ -1,0 +1,129 @@
+{{/*
+Antes había UNA NetworkPolicy de Postgres que dejaba pasar a cualquier pod
+con la etiqueta genérica "academia.io/role: db-client". Ahora hay 6 bases
+separadas, así que hace falta una NetworkPolicy POR base, cada una
+permitiendo el paso SOLO a su microservicio dueño (etiqueta específica,
+no genérica). El selector de cada base usa el label extra
+"academia.io/db-instance" que le agregamos en values.yaml
+(postgresql-<x>.primary.podLabels) para distinguir las 6 instancias del
+mismo Release.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sa-platform-postgresql-auth-restrict
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      academia.io/db-instance: auth
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              academia.io/role: auth-db-client
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sa-platform-postgresql-cursos-restrict
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      academia.io/db-instance: cursos
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              academia.io/role: cursos-db-client
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sa-platform-postgresql-inscripciones-restrict
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      academia.io/db-instance: inscripciones
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              academia.io/role: inscripciones-db-client
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sa-platform-postgresql-docentes-restrict
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      academia.io/db-instance: docentes
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              academia.io/role: docentes-db-client
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sa-platform-postgresql-calificaciones-restrict
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      academia.io/db-instance: calificaciones
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              academia.io/role: calificaciones-db-client
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sa-platform-postgresql-notas-restrict
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      academia.io/db-instance: notas
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              academia.io/role: notas-db-client
+      ports:
+        - protocol: TCP
+          port: 5432

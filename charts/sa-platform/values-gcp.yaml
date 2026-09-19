@@ -1,0 +1,180 @@
+# values-gcp.yaml — overrides para el despliegue en GKE (Práctica 6).
+# Uso: helm install sa-platform . -f values.yaml -f values-gcp.yaml -f values-secrets.yaml -n sa-p6 --create-namespace
+#
+# Clúster: 3 nodos e2-medium. Cada nodo solo deja ~940m de CPU disponible
+# para cargas propias (el resto lo reserva GKE para sus componentes de
+# sistema: fluentbit, kube-dns, gke-metrics-agent, etc.) — por eso los
+# requests de CPU/memoria van más ajustados que en values-dev.yaml, para
+# caber sin necesitar un 4to nodo.
+
+# --- Imágenes: ahora en Artifact Registry, ya no locales ---
+api-gateway:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  image:
+    repository: us-central1-docker.pkg.dev/sa-p6-202006633/sa-academia-repo/api-gateway
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+auth-service:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  image:
+    repository: us-central1-docker.pkg.dev/sa-p6-202006633/sa-academia-repo/auth-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+authorization-service:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  image:
+    repository: us-central1-docker.pkg.dev/sa-p6-202006633/sa-academia-repo/authorization-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+cursos-service:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  image:
+    repository: us-central1-docker.pkg.dev/sa-p6-202006633/sa-academia-repo/cursos-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+inscripciones-service:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  image:
+    repository: us-central1-docker.pkg.dev/sa-p6-202006633/sa-academia-repo/inscripciones-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+docentes-service:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  image:
+    repository: us-central1-docker.pkg.dev/sa-p6-202006633/sa-academia-repo/docentes-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+calificaciones-service:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  image:
+    repository: us-central1-docker.pkg.dev/sa-p6-202006633/sa-academia-repo/calificaciones-service
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+notas-consumer:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  image:
+    repository: us-central1-docker.pkg.dev/sa-p6-202006633/sa-academia-repo/notas-consumer
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+# --- Ya no usamos el Ingress local (sa-academia.local no resuelve en
+#     internet) — la IP pública la da el LoadBalancer de api-gateway ---
+ingress:
+  enabled: false
+
+# --- StorageClass real del proveedor + requests reducidos en las 6 bases
+#     (antes 100m/128Mi cada una, ahora 50m/64Mi — ya confirmado que
+#     "standard-rwo" funciona, solo ajustamos cuánto reserva cada pod) ---
+postgresql-auth:
+  primary:
+    persistence:
+      storageClass: standard-rwo
+      size: 1Gi
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { cpu: 100m, memory: 128Mi }
+
+postgresql-cursos:
+  primary:
+    persistence:
+      storageClass: standard-rwo
+      size: 1Gi
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { cpu: 100m, memory: 128Mi }
+
+postgresql-inscripciones:
+  primary:
+    persistence:
+      storageClass: standard-rwo
+      size: 1Gi
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { cpu: 100m, memory: 128Mi }
+
+postgresql-docentes:
+  primary:
+    persistence:
+      storageClass: standard-rwo
+      size: 1Gi
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { cpu: 100m, memory: 128Mi }
+
+postgresql-calificaciones:
+  primary:
+    persistence:
+      storageClass: standard-rwo
+      size: 1Gi
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { cpu: 100m, memory: 128Mi }
+
+postgresql-notas:
+  primary:
+    persistence:
+      storageClass: standard-rwo
+      size: 1Gi
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { cpu: 100m, memory: 128Mi }
+
+# RabbitMQ pedía 250m de CPU por defecto — es el más pesado de los que
+# faltan por agendar. Lo bajamos a 100m, de sobra para el volumen de
+# mensajes de esta práctica.
+rabbitmq:
+  persistence:
+    storageClass: standard-rwo
+    size: 1Gi
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: 200m, memory: 256Mi }

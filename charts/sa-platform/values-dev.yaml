@@ -1,0 +1,98 @@
+# values-dev.yaml — overrides para desarrollo local en Docker Desktop.
+# Uso: helm install sa-platform . -f values.yaml -f values-dev.yaml -n sa-p5 --create-namespace
+
+api-gateway:
+  replicaCount: 2
+  image:
+    tag: "dev"
+    pullPolicy: Never   # la imagen ya existe en el motor Docker local, no se busca en un registry
+  logLevel: debug
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+auth-service:
+  replicaCount: 1
+  image: { tag: "dev", pullPolicy: Never }
+  logLevel: debug
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { cpu: 150m, memory: 128Mi }
+
+authorization-service:
+  replicaCount: 1
+  image: { tag: "dev", pullPolicy: Never }
+  logLevel: debug
+
+cursos-service:
+  replicaCount: 1
+  image: { tag: "dev", pullPolicy: Never }
+  logLevel: debug
+
+inscripciones-service:
+  replicaCount: 1
+  image: { tag: "dev", pullPolicy: Never }
+  logLevel: debug
+
+docentes-service:
+  replicaCount: 1
+  image: { tag: "dev", pullPolicy: Never }
+  logLevel: debug
+
+calificaciones-service:
+  replicaCount: 1
+  image: { tag: "dev", pullPolicy: Never }
+  logLevel: debug
+
+notas-consumer:
+  replicaCount: 1
+  image: { tag: "dev", pullPolicy: Never }
+  logLevel: debug
+
+# --- Una base de datos por microservicio: mismo tamaño reducido para
+#     todas en dev, igual que antes tenía la única "postgresql:" ---
+postgresql-auth:
+  primary:
+    persistence:
+      size: 512Mi
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+
+postgresql-cursos:
+  primary:
+    persistence:
+      size: 512Mi
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+
+postgresql-inscripciones:
+  primary:
+    persistence:
+      size: 512Mi
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+
+postgresql-docentes:
+  primary:
+    persistence:
+      size: 512Mi
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+
+postgresql-calificaciones:
+  primary:
+    persistence:
+      size: 512Mi
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+
+postgresql-notas:
+  primary:
+    persistence:
+      size: 512Mi
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+
+rabbitmq:
+  persistence:
+    size: 512Mi

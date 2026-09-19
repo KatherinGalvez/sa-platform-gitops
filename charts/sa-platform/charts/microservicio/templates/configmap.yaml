@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "microservicio.fullname" . }}
+  labels:
+    {{- include "microservicio.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.logLevel | default "info" | quote }}
+  PORT: {{ .Values.port | quote }}
+  {{- range $key, $value := .Values.configMapData }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}

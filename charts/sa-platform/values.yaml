@@ -1,0 +1,271 @@
+# values.yaml — valores BASE (compartidos por dev y prod, que los
+# sobreescriben parcialmente). No contiene credenciales reales.
+#
+# Nota sobre nombres de imagen: en desarrollo local con Docker Desktop
+# Kubernetes, las imágenes construidas con `docker build` ya están
+# disponibles para el clúster sin necesidad de un registry externo
+# (comparten el mismo motor Docker). Por eso usamos imagePullPolicy
+# "Never" en dev — ver values-dev.yaml.
+
+# ============================================================
+# Credenciales (placeholders vacíos — los valores reales vienen de
+# values.example.yaml copiado a values-secrets.yaml, NUNCA aquí)
+# ============================================================
+secrets: {}
+
+# ============================================================
+
+ingress:
+  enabled: true   # en local se queda true (usa sa-academia.local); en la nube se desactiva
+
+# ============================================================
+
+# Bitnami bloquea por defecto el uso de imágenes fuera de su catálogo de
+# pago (incluyendo las gratuitas "bitnamisecure" que usamos aquí). Este
+# flag lo desactiva explícitamente — decisión documentada, no un descuido.
+global:
+  security:
+    allowInsecureImages: true
+
+# ============================================================
+# Microservicios (cada bloque corresponde a un "alias" del Chart.yaml)
+#
+# IMPORTANTE — Base de datos por microservicio: ya NO usamos
+# "envFromSecretName: sa-platform-secrets" para inyectar TODO el Secret
+# (eso mezclaría las 6 DATABASE_URL_* en el contenedor). En su lugar,
+# cada microservicio usa "envSecretRef" para pedir SOLO la clave del
+# Secret que le corresponde, mapeada al nombre de variable que su código
+# ya espera (DATABASE_URL). El resto de claves compartidas (JWT_SECRET,
+# AES_SECRET_KEY, RABBITMQ_URL) se siguen pidiendo igual.
+#
+# ⚠️ Esto requiere que charts/microservicio/templates/deployment.yaml
+# soporte "envSecretRef" (mapa nombre-de-env -> clave-del-secret). Si tu
+# deployment.yaml actual solo soporta "envFromSecretName" y "env" (valor
+# literal), hay que agregar ese bloque — te paso el snippet aparte.
+# ============================================================
+
+api-gateway:
+  image:
+    repository: sa-academia/api-gateway
+    tag: "1.0.0"
+  port: 8080
+  podLabels:
+    academia.io/role: gateway
+  networkPolicy:
+    allowOnlyFromGateway: false
+    allowFromIngressController: true
+  env:
+    AUTH_SERVICE_URL: "http://auth-service:3000"
+    AUTHORIZATION_SERVICE_URL: "http://authorization-service:4000"
+    CURSOS_SERVICE_URL: "http://cursos-service:5001"
+    INSCRIPCIONES_SERVICE_URL: "http://inscripciones-service:5002"
+    DOCENTES_SERVICE_URL: "http://docentes-service:5003"
+    CALIFICACIONES_SERVICE_URL: "http://calificaciones-service:5004"
+
+auth-service:
+  image:
+    repository: sa-academia/auth-service
+    tag: "1.0.0"
+  port: 3000
+  podLabels:
+    academia.io/role: auth-db-client
+  envFromSecretName: sa-platform-secrets   # JWT_SECRET, AES_SECRET_KEY (no DB, la pide aparte)
+  envSecretRef:
+    DATABASE_URL: DATABASE_URL_AUTH
+  env:
+    AUTHORIZATION_SERVICE_URL: "http://authorization-service:4000/authorize"
+
+authorization-service:
+  image:
+    repository: sa-academia/authorization-service
+    tag: "1.0.0"
+  port: 4000
+  # No usa base de datos — sin cambios.
+
+cursos-service:
+  image:
+    repository: sa-academia/cursos-service
+    tag: "1.0.0"
+  port: 5001
+  podLabels:
+    academia.io/role: cursos-db-client
+  envSecretRef:
+    DATABASE_URL: DATABASE_URL_CURSOS
+
+inscripciones-service:
+  image:
+    repository: sa-academia/inscripciones-service
+    tag: "1.0.0"
+  port: 5002
+  podLabels:
+    academia.io/role: inscripciones-db-client
+  envSecretRef:
+    DATABASE_URL: DATABASE_URL_INSCRIPCIONES
+
+docentes-service:
+  image:
+    repository: sa-academia/docentes-service
+    tag: "1.0.0"
+  port: 5003
+  podLabels:
+    academia.io/role: docentes-db-client
+  envSecretRef:
+    DATABASE_URL: DATABASE_URL_DOCENTES
+
+calificaciones-service:
+  image:
+    repository: sa-academia/calificaciones-service
+    tag: "1.0.0"
+  port: 5004
+  podLabels:
+    academia.io/role: calificaciones-db-client
+    academia.io/role-broker: broker-client
+  envFromSecretName: sa-platform-secrets   # RABBITMQ_URL (no DB, la pide aparte)
+  envSecretRef:
+    DATABASE_URL: DATABASE_URL_CALIFICACIONES
+  env:
+    DOCENTES_SERVICE_URL: "http://docentes-service:5003"
+    INSCRIPCIONES_SERVICE_URL: "http://inscripciones-service:5002"
+
+notas-consumer:
+  image:
+    repository: sa-academia/notas-consumer
+    tag: "1.0.0"
+  port: 5005
+  podLabels:
+    academia.io/role: notas-db-client
+    academia.io/role-broker: broker-client
+  envFromSecretName: sa-platform-secrets   # RABBITMQ_URL
+  envSecretRef:
+    DATABASE_URL: DATABASE_URL_NOTAS
+  # Este servicio no recibe tráfico HTTP externo (solo consume del broker),
+  # así que no necesita aceptar ingreso ni siquiera del gateway.
+  networkPolicy:
+    allowOnlyFromGateway: false
+    allowFromIngressController: false
+
+# ============================================================
+# Dependencias externas — UNA base de datos POR microservicio
+# (antes: una sola "postgresql:" compartida por los 6)
+# ============================================================
+
+postgresql-auth:
+  enabled: true
+  fullnameOverride: sa-platform-postgresql-auth
+  image:
+    registry: docker.io
+    repository: bitnamisecure/postgresql
+    tag: latest
+  auth:
+    username: academia
+    database: auth_db
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+    # Label extra para que la NetworkPolicy pueda distinguir ESTA instancia
+    # de las otras 5 (todas comparten el mismo Release.Name).
+    podLabels:
+      academia.io/db-instance: auth
+
+postgresql-cursos:
+  enabled: true
+  fullnameOverride: sa-platform-postgresql-cursos
+  image:
+    registry: docker.io
+    repository: bitnamisecure/postgresql
+    tag: latest
+  auth:
+    username: academia
+    database: cursos_db
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+    podLabels:
+      academia.io/db-instance: cursos
+
+postgresql-inscripciones:
+  enabled: true
+  fullnameOverride: sa-platform-postgresql-inscripciones
+  image:
+    registry: docker.io
+    repository: bitnamisecure/postgresql
+    tag: latest
+  auth:
+    username: academia
+    database: inscripciones_db
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+    podLabels:
+      academia.io/db-instance: inscripciones
+
+postgresql-docentes:
+  enabled: true
+  fullnameOverride: sa-platform-postgresql-docentes
+  image:
+    registry: docker.io
+    repository: bitnamisecure/postgresql
+    tag: latest
+  auth:
+    username: academia
+    database: docentes_db
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+    podLabels:
+      academia.io/db-instance: docentes
+
+postgresql-calificaciones:
+  enabled: true
+  fullnameOverride: sa-platform-postgresql-calificaciones
+  image:
+    registry: docker.io
+    repository: bitnamisecure/postgresql
+    tag: latest
+  auth:
+    username: academia
+    database: calificaciones_db
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+    podLabels:
+      academia.io/db-instance: calificaciones
+
+postgresql-notas:
+  enabled: true
+  fullnameOverride: sa-platform-postgresql-notas
+  image:
+    registry: docker.io
+    repository: bitnamisecure/postgresql
+    tag: latest
+  auth:
+    username: academia
+    database: notas_db
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+    podLabels:
+      academia.io/db-instance: notas
+
+rabbitmq:
+  enabled: true
+  fullnameOverride: sa-platform-rabbitmq
+  # bitnamisecure/rabbitmq NO existe (solo bitnamisecure/postgresql tiene
+  # versión gratuita). Para rabbitmq usamos el catálogo "congelado"
+  # (bitnamilegacy), con una versión específica ya confirmada que existe.
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/rabbitmq
+    tag: 4.0.9-debian-12-r1
+  auth:
+    username: academia
+    # existingPasswordSecret se define en values propios, no aquí.
+  persistence:
+    enabled: true
+    size: 1Gi

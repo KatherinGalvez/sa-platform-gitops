@@ -1,0 +1,106 @@
+# values-prod.yaml — overrides que simulan un ambiente de "producción"
+# (más réplicas, límites más generosos, logs menos verbosos, imágenes
+# etiquetadas por versión real en vez de "dev").
+# Uso: helm install sa-platform . -f values.yaml -f values-prod.yaml -n sa-p5 --create-namespace
+
+api-gateway:
+  replicaCount: 3
+  image: { tag: "1.0.0", pullPolicy: IfNotPresent }
+  logLevel: warn
+  resources:
+    requests: { cpu: 150m, memory: 128Mi }
+    limits: { cpu: 400m, memory: 256Mi }
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 5
+
+auth-service:
+  replicaCount: 2
+  image: { tag: "1.0.0", pullPolicy: IfNotPresent }
+  logLevel: warn
+  resources:
+    requests: { cpu: 150m, memory: 128Mi }
+    limits: { cpu: 400m, memory: 256Mi }
+
+authorization-service:
+  replicaCount: 2
+  image: { tag: "1.0.0", pullPolicy: IfNotPresent }
+  logLevel: warn
+
+cursos-service:
+  replicaCount: 2
+  image: { tag: "1.0.0", pullPolicy: IfNotPresent }
+  logLevel: warn
+
+inscripciones-service:
+  replicaCount: 2
+  image: { tag: "1.0.0", pullPolicy: IfNotPresent }
+  logLevel: warn
+
+docentes-service:
+  replicaCount: 2
+  image: { tag: "1.0.0", pullPolicy: IfNotPresent }
+  logLevel: warn
+
+calificaciones-service:
+  replicaCount: 2
+  image: { tag: "1.0.0", pullPolicy: IfNotPresent }
+  logLevel: warn
+
+notas-consumer:
+  replicaCount: 2
+  image: { tag: "1.0.0", pullPolicy: IfNotPresent }
+  logLevel: warn
+
+# --- Una base de datos por microservicio ---
+postgresql-auth:
+  primary:
+    persistence:
+      size: 4Gi
+    resources:
+      requests: { cpu: 250m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+
+postgresql-cursos:
+  primary:
+    persistence:
+      size: 4Gi
+    resources:
+      requests: { cpu: 250m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+
+postgresql-inscripciones:
+  primary:
+    persistence:
+      size: 4Gi
+    resources:
+      requests: { cpu: 250m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+
+postgresql-docentes:
+  primary:
+    persistence:
+      size: 4Gi
+    resources:
+      requests: { cpu: 250m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+
+postgresql-calificaciones:
+  primary:
+    persistence:
+      size: 4Gi
+    resources:
+      requests: { cpu: 250m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+
+postgresql-notas:
+  primary:
+    persistence:
+      size: 4Gi
+    resources:
+      requests: { cpu: 250m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+
+rabbitmq:
+  persistence:
+    size: 2Gi

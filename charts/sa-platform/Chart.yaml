@@ -1,0 +1,109 @@
+apiVersion: v2
+name: sa-platform
+description: >
+  Plataforma de microservicios de la academia — Práctica 5 (Software
+  Avanzado). Chart padre que empaqueta los microservicios de P4 (como
+  subcharts, vía alias del subchart genérico "microservicio"), más
+  PostgreSQL (una instancia POR microservicio con datos propios) y
+  RabbitMQ como dependencias externas.
+type: application
+
+# Versión del CHART (su empaquetado/estructura). Debe incrementarse en
+# cada cambio a las plantillas — independiente de appVersion.
+version: 0.2.0
+
+# Versión de la APLICACIÓN que este chart despliega (los microservicios de
+# P4). Se incrementa cuando cambia el código de los microservicios, no la
+# estructura del chart.
+appVersion: "1.1.0"
+
+dependencies:
+  # --- Los 8 microservicios/gateway, todos instancias del MISMO subchart
+  #     genérico "microservicio" (ver charts/microservicio/), diferenciados
+  #     por "alias". Esto evita duplicar templates 8 veces. ---
+  - name: microservicio
+    version: "0.1.0"
+    repository: "file://charts/microservicio"
+    alias: api-gateway
+
+  - name: microservicio
+    version: "0.1.0"
+    repository: "file://charts/microservicio"
+    alias: auth-service
+
+  - name: microservicio
+    version: "0.1.0"
+    repository: "file://charts/microservicio"
+    alias: authorization-service
+
+  - name: microservicio
+    version: "0.1.0"
+    repository: "file://charts/microservicio"
+    alias: cursos-service
+
+  - name: microservicio
+    version: "0.1.0"
+    repository: "file://charts/microservicio"
+    alias: inscripciones-service
+
+  - name: microservicio
+    version: "0.1.0"
+    repository: "file://charts/microservicio"
+    alias: docentes-service
+
+  - name: microservicio
+    version: "0.1.0"
+    repository: "file://charts/microservicio"
+    alias: calificaciones-service
+
+  - name: microservicio
+    version: "0.1.0"
+    repository: "file://charts/microservicio"
+    alias: notas-consumer
+    # Nuevo microservicio consumidor del flujo asíncrono: escucha el
+    # broker cuando calificaciones-service publica una nota nueva.
+
+  # --- Base de datos por microservicio (patrón "database per service"):
+  #     6 instancias del MISMO chart de Bitnami, cada una con su propio
+  #     alias, cada una con SU PROPIA base y SUS PROPIAS tablas. Ningún
+  #     microservicio ve la base de otro. ---
+  - name: postgresql
+    version: "16.7.27"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    alias: postgresql-auth
+    condition: postgresql-auth.enabled
+
+  - name: postgresql
+    version: "16.7.27"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    alias: postgresql-cursos
+    condition: postgresql-cursos.enabled
+
+  - name: postgresql
+    version: "16.7.27"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    alias: postgresql-inscripciones
+    condition: postgresql-inscripciones.enabled
+
+  - name: postgresql
+    version: "16.7.27"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    alias: postgresql-docentes
+    condition: postgresql-docentes.enabled
+
+  - name: postgresql
+    version: "16.7.27"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    alias: postgresql-calificaciones
+    condition: postgresql-calificaciones.enabled
+
+  - name: postgresql
+    version: "16.7.27"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    alias: postgresql-notas
+    condition: postgresql-notas.enabled
+
+  - name: rabbitmq
+    version: "16.0.14"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: rabbitmq.enabled

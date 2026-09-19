@@ -1,0 +1,53 @@
+# values.example.yaml
+#
+# Plantilla de las variables SENSIBLES que el sistema necesita, con valores
+# FICTICIOS. Este archivo SÍ se sube al repositorio (a diferencia de
+# "values-secrets.yaml", que está en .gitignore y contiene los valores
+# reales que cada quien usa localmente).
+#
+# Cómo usarlo:
+#   1. cp values.example.yaml values-secrets.yaml
+#   2. Reemplazar los valores ficticios por los reales.
+#   3. helm install sa-platform . -f values.yaml -f values-dev.yaml -f values-secrets.yaml -n sa-p5 --create-namespace
+#
+# ⚠️ Nunca uses caracteres especiales (& @ : / # ?) en estas contraseñas
+# — rompen la URL de conexión postgresql://user:pass@host/db que arma
+# el chart en el Secret.
+
+postgresql-auth:
+  auth:
+    password: "CAMBIA-ESTO-password-auth-ficticio"
+    postgresPassword: "CAMBIA-ESTO-password-admin-auth-ficticio"
+
+postgresql-cursos:
+  auth:
+    password: "CAMBIA-ESTO-password-cursos-ficticio"
+    postgresPassword: "CAMBIA-ESTO-password-admin-cursos-ficticio"
+
+postgresql-inscripciones:
+  auth:
+    password: "CAMBIA-ESTO-password-inscripciones-ficticio"
+    postgresPassword: "CAMBIA-ESTO-password-admin-inscripciones-ficticio"
+
+postgresql-docentes:
+  auth:
+    password: "CAMBIA-ESTO-password-docentes-ficticio"
+    postgresPassword: "CAMBIA-ESTO-password-admin-docentes-ficticio"
+
+postgresql-calificaciones:
+  auth:
+    password: "CAMBIA-ESTO-password-calificaciones-ficticio"
+    postgresPassword: "CAMBIA-ESTO-password-admin-calificaciones-ficticio"
+
+postgresql-notas:
+  auth:
+    password: "CAMBIA-ESTO-password-notas-ficticio"
+    postgresPassword: "CAMBIA-ESTO-password-admin-notas-ficticio"
+
+rabbitmq:
+  auth:
+    password: "CAMBIA-ESTO-password-broker-ficticio"
+
+secrets:
+  jwtSecret: "cambia-esto-por-un-secreto-largo-y-aleatorio"
+  aesSecretKey: "una-llave-de-exactamente-32-char"

@@ -1,0 +1,79 @@
+# Valores por defecto del subchart "microservicio". Cada instancia (alias)
+# del chart padre sobreescribe estos valores según lo que necesite.
+
+image:
+  repository: ""   # OBLIGATORIO — se valida con `required` en el template
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+port: 3000
+
+# Variables NO sensibles -> se vuelcan en un ConfigMap generado por el chart.
+configMapData: {}
+
+# Nombre de un Secret YA EXISTENTE en el clúster (creado aparte, nunca en el
+# repo) cuyas variables se inyectan con envFrom. Ver values.example.yaml.
+envFromSecretName: ""
+
+# Variables individuales adicionales (no sensibles) inyectadas directo.
+env: {}
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+probes:
+  path: /health
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    failureThreshold: 3
+  startup:
+    periodSeconds: 2
+    failureThreshold: 30   # hasta 60s para arrancar antes de matar el pod
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 0
+
+networkPolicy:
+  enabled: true
+  # Si true, solo el pod con la etiqueta "academia.io/role: gateway"
+  # puede iniciar conexiones de red hacia este microservicio.
+  allowOnlyFromGateway: true
+  # Caso especial: SOLO el propio api-gateway activa esto en true (y pone
+  # allowOnlyFromGateway en false), porque él sí debe aceptar tráfico
+  # desde fuera del clúster, a través del Ingress Controller.
+  allowFromIngressController: false
+
+serviceAccount:
+  create: true
+
+# Etiquetas adicionales en los pods, usadas por las NetworkPolicy para
+# identificar roles especiales (ej. academia.io/role: gateway) sin tener
+# que crear un subchart distinto solo para eso.
+podLabels: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65532   # UID fijo del usuario "nonroot" en imágenes distroless
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+
+logLevel: info

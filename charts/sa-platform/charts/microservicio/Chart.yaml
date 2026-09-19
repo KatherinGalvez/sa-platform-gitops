@@ -1,0 +1,10 @@
+apiVersion: v2
+name: microservicio
+description: >
+  Subchart genérico y reutilizable para desplegar cualquier microservicio
+  de la plataforma de academia. Se instancia varias veces desde el chart
+  padre (sa-platform) usando "alias" en las dependencias, para no duplicar
+  plantillas por cada uno de los 5 microservicios + gateway.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

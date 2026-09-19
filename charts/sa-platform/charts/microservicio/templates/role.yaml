@@ -1,0 +1,17 @@
+{{- if .Values.serviceAccount.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "microservicio.fullname" . }}
+  labels:
+    {{- include "microservicio.labels" . | nindent 4 }}
+rules:
+  # Mínimo privilegio real y defendible: este pod SOLO puede leer (get) su
+  # propio ConfigMap, nada más. No puede listar, modificar, ni tocar
+  # recursos de otros microservicios ni namespaces.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames:
+      - {{ include "microservicio.fullname" . }}
+    verbs: ["get"]
+{{- end }}

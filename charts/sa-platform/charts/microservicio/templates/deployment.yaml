@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "microservicio.fullname" . }}
+  labels:
+    {{- include "microservicio.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount | default 2 }}
+  selector:
+    matchLabels:
+      {{- include "microservicio.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        {{- include "microservicio.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        # Fuerza un reinicio automático de los pods cuando cambia el
+        # ConfigMap (aunque la imagen no cambie), porque Kubernetes por sí
+        # solo NO reinicia pods al actualizar un ConfigMap montado por
+        # envFrom. Es el truco estándar recomendado por la comunidad.
+        checksum/config: {{ include (print .Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "microservicio.fullname" . }}
+      securityContext:
+        runAsNonRoot: {{ .Values.securityContext.runAsNonRoot }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+      containers:
+        - name: app
+          image: "{{ required "microservicio: debes indicar image.repository en los values" .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+          securityContext:
+            readOnlyRootFilesystem: {{ .Values.securityContext.readOnlyRootFilesystem }}
+            allowPrivilegeEscalation: {{ .Values.securityContext.allowPrivilegeEscalation }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "microservicio.fullname" . }}
+            {{- if .Values.envFromSecretName }}
+            - secretRef:
+                name: {{ .Values.envFromSecretName }}
+            {{- end }}
+          {{- if or .Values.env .Values.envSecretRef }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{/*
+              envSecretRef: mapa "NOMBRE_ENV: clave-en-el-Secret". A
+              diferencia de envFromSecretName (que inyecta TODO el
+              Secret), esto trae SOLO la clave indicada — así cada
+              microservicio recibe su propia DATABASE_URL_* sin ver las
+              de los demás. El nombre del Secret está fijo porque hay uno
+              solo compartido en todo el chart (sa-platform-secrets).
+            */}}
+            {{- range $key, $secretKey := .Values.envSecretRef }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: sa-platform-secrets
+                  key: {{ $secretKey }}
+            {{- end }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.probes.path }}
+              port: http
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

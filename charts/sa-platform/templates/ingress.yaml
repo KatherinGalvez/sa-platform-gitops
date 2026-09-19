@@ -1,0 +1,24 @@
+{{- if .Values.ingress.enabled }}
+# Solo se usa en local (Docker Desktop + nginx-ingress + sa-academia.local).
+# En la nube (values-gcp.yaml) se desactiva con ingress.enabled: false,
+# porque ahí exponemos api-gateway directo con un Service type: LoadBalancer
+# (evita tener que instalar y mantener un controlador nginx aparte).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sa-platform-ingress
+  namespace: {{ .Release.Namespace }}
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: sa-academia.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080
+{{- end }}
