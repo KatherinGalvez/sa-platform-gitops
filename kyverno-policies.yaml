@@ -1,0 +1,68 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-image-tag
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [produccion]
+      validate:
+        message: "La etiqueta 'latest' esta prohibida. Use un tag semantico."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: require-cpu-memory-limits
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [produccion]
+      validate:
+        message: "Todo contenedor debe declarar limits de CPU y memoria."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-run-as-nonroot
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: require-non-root
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [produccion]
+      validate:
+        message: "Los contenedores deben ejecutarse con runAsNonRoot: true."
+        pattern:
+          spec:
+            =(securityContext):
+              =(runAsNonRoot): true
+            containers:
+              - =(securityContext):
+                  =(runAsNonRoot): true

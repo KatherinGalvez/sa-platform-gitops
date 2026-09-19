@@ -1,0 +1,113 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mi-app-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/KatherinGalvez/sa-platform-gitops.git
+    targetRevision: main
+    path: charts/sa-platform
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-prod.yaml
+      values: |
+        postgresql-auth:
+          auth:
+            password: "CAMBIAR-EN-DEPLOY"
+            postgresPassword: "CAMBIAR-EN-DEPLOY"
+        postgresql-cursos:
+          auth:
+            password: "CAMBIAR-EN-DEPLOY"
+            postgresPassword: "CAMBIAR-EN-DEPLOY"
+        postgresql-inscripciones:
+          auth:
+            password: "CAMBIAR-EN-DEPLOY"
+            postgresPassword: "CAMBIAR-EN-DEPLOY"
+        postgresql-docentes:
+          auth:
+            password: "CAMBIAR-EN-DEPLOY"
+            postgresPassword: "CAMBIAR-EN-DEPLOY"
+        postgresql-calificaciones:
+          auth:
+            password: "CAMBIAR-EN-DEPLOY"
+            postgresPassword: "CAMBIAR-EN-DEPLOY"
+        postgresql-notas:
+          auth:
+            password: "CAMBIAR-EN-DEPLOY"
+            postgresPassword: "CAMBIAR-EN-DEPLOY"
+        rabbitmq:
+          auth:
+            password: "CAMBIAR-EN-DEPLOY"
+        secrets:
+          jwtSecret: "CAMBIAR-EN-DEPLOY"
+          aesSecretKey: "CAMBIAR-EN-DEPLOY"
+        ingress:
+          enabled: false
+        api-gateway:
+          replicaCount: 1
+          image:
+            repository: ghcr.io/katheringalvez/api-gateway
+            tag: "v1.0.0"
+          autoscaling:
+            enabled: false
+        auth-service:
+          replicaCount: 1
+          image:
+            repository: ghcr.io/katheringalvez/auth-service
+            tag: "v1.0.0"
+          autoscaling:
+            enabled: false
+        authorization-service:
+          replicaCount: 1
+          image:
+            repository: ghcr.io/katheringalvez/authorization-service
+            tag: "v1.0.0"
+          autoscaling:
+            enabled: false
+        cursos-service:
+          replicaCount: 1
+          image:
+            repository: ghcr.io/katheringalvez/cursos-service
+            tag: "v1.0.0"
+          autoscaling:
+            enabled: false
+        inscripciones-service:
+          replicaCount: 1
+          image:
+            repository: ghcr.io/katheringalvez/inscripciones-service
+            tag: "v1.0.0"
+          autoscaling:
+            enabled: false
+        docentes-service:
+          replicaCount: 1
+          image:
+            repository: ghcr.io/katheringalvez/docentes-service
+            tag: "v1.0.0"
+          autoscaling:
+            enabled: false
+        calificaciones-service:
+          replicaCount: 1
+          image:
+            repository: ghcr.io/katheringalvez/calificaciones-service
+            tag: "v1.0.0"
+          autoscaling:
+            enabled: false
+        notas-consumer:
+          replicaCount: 1
+          image:
+            repository: ghcr.io/katheringalvez/notas-consumer
+            tag: "v1.0.0"
+          autoscaling:
+            enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: produccion
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
