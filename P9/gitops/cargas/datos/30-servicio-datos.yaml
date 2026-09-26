@@ -1,0 +1,93 @@
+# API REST sobre la base de datos (PostgREST). 3 replicas repartidas entre
+# nodos: sigue respondiendo mientras se drena un nodo.
+apiVersion: v1
+kind: Service
+metadata:
+  name: servicio-datos
+  labels: { app: servicio-datos, practica: p9 }
+spec:
+  selector: { app: servicio-datos }
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servicio-datos
+  labels: { app: servicio-datos, practica: p9 }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: servicio-datos }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: { app: servicio-datos, practica: p9 }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      affinity:
+        podAntiAffinity:
+          # Preferida (no obligatoria): con 3 nodos, al drenar uno la replica
+          # desalojada puede reprogramarse en otro nodo en vez de quedar Pending.
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app: servicio-datos }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app: servicio-datos }
+      containers:
+        - name: postgrest
+          image: postgrest/postgrest:v13.0.8
+          ports:
+            - { name: http, containerPort: 3000 }
+            - { name: admin, containerPort: 3001 }
+          env:
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: db-credenciales, key: usuario } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: db-credenciales, key: password } }
+            - name: PGRST_DB_URI
+              value: postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/p9
+            - name: PGRST_DB_SCHEMAS
+              value: public
+            - name: PGRST_DB_ANON_ROLE
+              value: web_anon
+            - name: PGRST_ADMIN_SERVER_PORT
+              value: "3001"
+          readinessProbe:
+            httpGet: { path: /ready, port: admin }
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: { path: /live, port: admin }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          startupProbe:
+            httpGet: { path: /live, port: admin }
+            periodSeconds: 3
+            failureThreshold: 20
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 128Mi }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: servicio-datos
+  labels: { app: servicio-datos, practica: p9 }
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: { app: servicio-datos }

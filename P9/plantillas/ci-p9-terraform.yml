@@ -1,0 +1,30 @@
+# Copie este archivo a .github/workflows/p9-terraform.yml (en la raiz del repositorio).
+# Disciplina de IaC: formato y validacion en cada push, SIN estado ni credenciales
+# (init -backend=false), y falla si alguien sube un archivo de estado.
+name: P9 - Terraform
+
+on:
+  push:
+    paths: ["P9/**"]
+  pull_request:
+    paths: ["P9/**"]
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        capa: [persistente, cluster]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: Sin archivos de estado en el repositorio
+        run: |
+          if git ls-files | grep -E '\.tfstate(\.|$)'; then
+            echo "::error::Hay archivos de estado versionados"; exit 1; fi
+      - name: fmt
+        run: terraform -chdir=P9/terraform/${{ matrix.capa }} fmt -check -diff
+      - name: validate
+        run: |
+          terraform -chdir=P9/terraform/${{ matrix.capa }} init -backend=false -input=false
+          terraform -chdir=P9/terraform/${{ matrix.capa }} validate

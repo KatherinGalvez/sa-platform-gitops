@@ -1,0 +1,184 @@
+# Restauracion automatica en el bootstrap de dia cero.
+# Se ejecuta UNA vez por cluster (ola 1 del app-of-apps):
+#   - Sin respaldos en el bucket  -> arranque en limpio (primer despliegue).
+#   - Con respaldos               -> restaura "datos" desde el ultimo respaldo
+#     COMPLETADO anterior a la creacion de este cluster.
+# Los Secrets se excluyen a proposito: los recrea Sealed Secrets a partir del
+# SealedSecret, lo que demuestra que la llave sobrevivio al desastre.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: restauracion-dr
+  namespace: velero
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: restauracion-dr
+  namespace: velero
+rules:
+  - apiGroups: ["velero.io"]
+    resources: ["backups", "backupstoragelocations"]
+    verbs: ["get", "list"]
+  - apiGroups: ["velero.io"]
+    resources: ["restores"]
+    verbs: ["get", "list", "create"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: restauracion-dr
+  namespace: velero
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: restauracion-dr
+subjects:
+  - kind: ServiceAccount
+    name: restauracion-dr
+    namespace: velero
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: restauracion-dr-lectura
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["statefulsets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: restauracion-dr-lectura
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: restauracion-dr-lectura
+subjects:
+  - kind: ServiceAccount
+    name: restauracion-dr
+    namespace: velero
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: restauracion-dr-script
+  namespace: velero
+data:
+  restaurar.sh: |
+    #!/bin/sh
+    set -u
+    SCHEDULE="velero-horario"
+    NS_OBJETIVO="datos"
+    log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) [restauracion-dr] $*"; }
+
+    log "Inicio"
+    if kubectl -n "$NS_OBJETIVO" get statefulset postgres >/dev/null 2>&1; then
+      log "El namespace $NS_OBJETIVO ya tiene la base de datos: no se restaura nada."
+      exit 0
+    fi
+
+    log "Esperando a Velero..."
+    i=0
+    until kubectl -n velero get deploy velero -o jsonpath='{.status.readyReplicas}' 2>/dev/null | grep -q 1; do
+      i=$((i+1)); [ $i -gt 90 ] && { log "Velero no estuvo listo a tiempo"; exit 0; }; sleep 5
+    done
+
+    log "Esperando que la ubicacion de respaldos este Available..."
+    i=0; FASE=""
+    while [ "$FASE" != "Available" ]; do
+      FASE=$(kubectl -n velero get backupstoragelocation default -o jsonpath='{.status.phase}' 2>/dev/null)
+      i=$((i+1)); [ $i -gt 90 ] && { log "BSL no disponible (fase='$FASE'). Revise permisos del bucket."; exit 0; }
+      [ "$FASE" = "Available" ] || sleep 5
+    done
+    log "BSL Available"
+
+    # Limite: el cluster nacio cuando se creo kube-system. Cualquier respaldo
+    # posterior fue tomado por ESTE cluster (vacio) y no sirve para restaurar.
+    CREACION=$(kubectl get ns kube-system -o jsonpath='{.metadata.creationTimestamp}')
+    log "Cluster creado en $CREACION"
+
+    ULTIMO=""
+    i=0
+    while [ -z "$ULTIMO" ] && [ $i -lt 24 ]; do
+      ULTIMO=$(kubectl -n velero get backups -l velero.io/schedule-name=$SCHEDULE \
+        -o jsonpath='{range .items[*]}{.status.phase}{" "}{.status.startTimestamp}{" "}{.metadata.name}{"\n"}{end}' 2>/dev/null \
+        | awk -v lim="$CREACION" '$1=="Completed" && $2<lim {print $2" "$3}' | sort | tail -1 | awk '{print $2}')
+      [ -z "$ULTIMO" ] && { i=$((i+1)); sleep 5; }
+    done
+
+    if [ -z "$ULTIMO" ]; then
+      log "No hay respaldos previos del schedule $SCHEDULE: arranque en limpio."
+      exit 0
+    fi
+
+    NOMBRE="dr-$(date -u +%Y%m%d%H%M%S)"
+    log "Restaurando $NS_OBJETIVO desde el respaldo $ULTIMO (restore $NOMBRE)"
+    cat <<EOF | kubectl create -f -
+    apiVersion: velero.io/v1
+    kind: Restore
+    metadata:
+      name: $NOMBRE
+      namespace: velero
+      labels:
+        practica: p9
+        origen: bootstrap-dr
+    spec:
+      backupName: $ULTIMO
+      includedNamespaces: [$NS_OBJETIVO]
+      excludedResources: [secrets, jobs.batch, events, events.events.k8s.io]
+      restorePVs: true
+      existingResourcePolicy: none
+    EOF
+
+    i=0; FASE=""
+    while :; do
+      FASE=$(kubectl -n velero get restore "$NOMBRE" -o jsonpath='{.status.phase}' 2>/dev/null)
+      case "$FASE" in
+        Completed|PartiallyFailed|Failed|FailedValidation) break ;;
+      esac
+      i=$((i+1)); [ $i -gt 180 ] && { log "Tiempo agotado esperando la restauracion"; break; }
+      sleep 5
+    done
+    log "Restauracion $NOMBRE terminada con fase: $FASE"
+    kubectl -n velero get restore "$NOMBRE" -o jsonpath='{"advertencias="}{.status.warnings}{" errores="}{.status.errors}{"\n"}'
+    log "Fin"
+    exit 0
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: restauracion-dr
+  namespace: velero
+  labels:
+    app: restauracion-dr
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: restauracion-dr
+    spec:
+      serviceAccountName: restauracion-dr
+      restartPolicy: OnFailure
+      containers:
+        - name: restaurar
+          image: alpine/k8s:1.31.2
+          command: ["/bin/sh", "/scripts/restaurar.sh"]
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: restauracion-dr-script

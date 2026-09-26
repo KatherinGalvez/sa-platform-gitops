@@ -1,0 +1,13 @@
+# Estado de Terraform: vive SOLO en el backend remoto (GCS)
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfplan
+crash.log
+
+# Configuracion local y material sensible
+p9.env
+*.key
+*.pem
+llave-*.yaml
+secreto-plano-*.yaml

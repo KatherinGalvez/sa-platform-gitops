@@ -1,2 +1,4 @@
 argocd-application.yaml
 app-status.txt
+
+charts/sa-platform/values-secrets.yaml

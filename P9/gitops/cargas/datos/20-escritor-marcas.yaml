@@ -1,0 +1,39 @@
+# Escribe una "marca" por minuto. Tras cualquier restauracion, la ultima marca
+# recuperada indica exactamente cuanto dato se perdio (RPO real medido).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: escritor-marcas
+  labels: { app: escritor-marcas, practica: p9 }
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 50
+      template:
+        metadata:
+          labels: { app: escritor-marcas, practica: p9 }
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          containers:
+            - name: psql
+              image: postgres:16.4
+              command:
+                - sh
+                - -c
+                - psql -h postgres -d p9 -v ON_ERROR_STOP=1 -c "INSERT INTO marcas (origen) VALUES ('cronjob');"
+              env:
+                - name: PGUSER
+                  valueFrom: { secretKeyRef: { name: db-credenciales, key: usuario } }
+                - name: PGPASSWORD
+                  valueFrom: { secretKeyRef: { name: db-credenciales, key: password } }
+              resources:
+                requests: { cpu: 10m, memory: 32Mi }
+                limits: { memory: 64Mi }

@@ -1,0 +1,27 @@
+# Ola 3: el ecosistema de la Practica 8 (microservicios de P4/P5, Argo Rollouts,
+# politicas de admision...). Renombre este archivo a 40-sistema-p8.yaml y
+# apunte "path" a la carpeta GitOps (o al app-of-apps) de su Practica 8.
+#
+# IMPORTANTE: si su P8 ya instala sealed-secrets, quitelo de alli (lo gestiona
+# 00-sealed-secrets.yaml) para no tener dos aplicaciones sobre el mismo recurso.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sistema-p8
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: default
+  source:
+    repoURL: __REPO_URL__
+    targetRevision: __REPO_RAMA__
+    path: P8/gitops            # <-- AJUSTE a su ruta real
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

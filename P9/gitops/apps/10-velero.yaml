@@ -1,0 +1,81 @@
+# Ola 0: Velero con respaldo de volumenes a nivel de archivo (Kopia) hacia un
+# bucket de GCS externo al cluster. Credenciales via Workload Identity.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: velero
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://vmware-tanzu.github.io/helm-charts
+    chart: velero
+    targetRevision: 12.2.0
+    helm:
+      releaseName: velero
+      valuesObject:
+        initContainers:
+          - name: velero-plugin-for-gcp
+            image: velero/velero-plugin-for-gcp:v1.14.3
+            imagePullPolicy: IfNotPresent
+            volumeMounts:
+              - mountPath: /target
+                name: plugins
+        credentials:
+          useSecret: false
+        serviceAccount:
+          server:
+            name: velero-server
+            annotations:
+              iam.gke.io/gcp-service-account: __VELERO_GSA__
+        snapshotsEnabled: false
+        deployNodeAgent: true
+        configuration:
+          uploaderType: kopia
+          defaultVolumesToFsBackup: true
+          backupStorageLocation:
+            - name: default
+              provider: velero.io/gcp
+              bucket: __VELERO_BUCKET__
+              default: true
+              backupSyncPeriod: 30s
+              config:
+                serviceAccount: __VELERO_GSA__
+          volumeSnapshotLocation: []
+        # Calendario y retencion: un respaldo por hora, conservado 7 dias.
+        # Nombre final del schedule: velero-horario
+        schedules:
+          horario:
+            disabled: false
+            schedule: "0 * * * *"
+            useOwnerReferencesInBackup: false
+            # Evita que un cluster recien reconstruido genere de inmediato un
+            # respaldo VACIO que luego seria "el mas reciente".
+            skipImmediately: true
+            labels:
+              practica: p9
+            template:
+              ttl: 168h0m0s
+              storageLocation: default
+              includedNamespaces:
+                - datos
+              defaultVolumesToFsBackup: true
+              snapshotVolumes: false
+        resources:
+          requests: { cpu: 100m, memory: 128Mi }
+          limits: { memory: 512Mi }
+        nodeAgent:
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 1Gi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true

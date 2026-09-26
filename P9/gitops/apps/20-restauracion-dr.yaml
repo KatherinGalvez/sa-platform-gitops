@@ -1,0 +1,20 @@
+# Ola 1: si existen respaldos en el bucket (cluster reconstruido), restaura el
+# namespace "datos" ANTES de que ArgoCD cree la base de datos vacia (ola 2).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: restauracion-dr
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: __REPO_URL__
+    targetRevision: __REPO_RAMA__
+    path: __GITOPS_RUTA__/plataforma/restauracion
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: velero
+  syncPolicy:
+    automated: { prune: false, selfHeal: true }
