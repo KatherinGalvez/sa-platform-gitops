@@ -39,8 +39,9 @@ El ecosistema de microservicios de las prácticas anteriores se vuelve **recuper
 | Llave de Sealed Secrets solo dentro del clúster | Llave en Google Secret Manager; Terraform la reinyecta en `kube-system` **antes** de instalar el controlador; renovación automática desactivada |
 | Reconstrucción manual | `bootstrap.sh` → Terraform (GKE + ArgoCD + app raíz) → app-of-apps por olas con restauración automática de datos |
 | Caída de un nodo | 3 réplicas de la API, anti-afinidad por nodo, `topologySpreadConstraints`, PDB `minAvailable: 2`, probes de arranque/vida/disponibilidad |
+| Flujo de la Práctica 8 (GitOps, entrega progresiva, admisión) | ArgoCD app-of-apps, la API se publica como `Rollout` canary (34 % → 67 % → 100 %) y Kyverno aplica 3 políticas `Enforce`; todo se reconstruye en el mismo bootstrap ([`scripts/verificar-flujo.sh`](./scripts/verificar-flujo.sh)) |
 
-**Servicio con estado verificable:** PostgreSQL (`StatefulSet`, PVC 2 GiB) con 50 pedidos semilla y un CronJob que escribe una "marca" por minuto. La API REST (`servicio-datos`, PostgREST) expone los datos. La huella md5 de `pedidos` demuestra que se restauró el **contenido** y la última marca recuperada da el RPO exacto.
+**Servicio con estado verificable:** PostgreSQL (`StatefulSet`, PVC 2 GiB) con 50 pedidos semilla y un CronJob que escribe una "marca" por minuto. La API REST (`servicio-datos`, PostgREST, desplegada como `Rollout`) expone los datos. La huella md5 de `pedidos` demuestra que se restauró el **contenido** y la última marca recuperada da el RPO exacto.
 
 ```
 P9/
@@ -49,11 +50,11 @@ P9/
 │   ├── persistente/    buckets, SA de Velero, Secret Manager (no se destruye)
 │   └── cluster/        GKE, Workload Identity, llave, ArgoCD, app raíz
 ├── gitops/
-│   ├── apps/           app-of-apps: sealed-secrets, velero, restauracion-dr, datos, sistema-p8
-│   ├── plataforma/     job de restauración automática
+│   ├── apps/           app-of-apps: sealed-secrets, velero, argo-rollouts, kyverno, politicas, restauracion-dr, datos
+│   ├── plataforma/     job de restauración automática y políticas de Kyverno
 │   └── cargas/datos/   PostgreSQL, API, PDB, CronJob, SealedSecret
 ├── docs/               informe, runbook, diagrama, guía
-├── plantillas/         resiliencia para microservicios P4/P5, CI de Terraform
+├── plantillas/         CI de Terraform
 └── evidencias/         registros con marcas de tiempo y capturas
 ```
 
@@ -77,5 +78,5 @@ Paso a paso completo (incluida la preparación única): [`docs/RUNBOOK.md`](./do
 | `<<>>` | Restauración de datos: borrado, restauración y verificación del contenido |
 | `<<>>` | Destrucción total del entorno (cronómetro corriendo) |
 | `<<>>` | `bootstrap.sh`: ArgoCD por olas y restauración automática |
-| `<<>>` | Secretos descifrados tras la reconstrucción y flujo de P8 operando |
+| `<<>>` | Secretos descifrados tras la reconstrucción; canary y política de Kyverno operando |
 | `<<>>` | RTO/RPO medidos frente a declarados y brecha |

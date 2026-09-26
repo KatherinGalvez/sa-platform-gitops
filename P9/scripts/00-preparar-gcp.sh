@@ -19,8 +19,14 @@ if ! command -v kubeseal >/dev/null; then
   curl -fsSL https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.40.0/kubeseal-0.40.0-linux-amd64.tar.gz \
     | tar -xz -C "$HOME/.local/bin" kubeseal
 fi
+if ! command -v kubectl-argo-rollouts >/dev/null; then
+  log "Instalando plugin kubectl argo rollouts v1.10.0"
+  curl -fsSL -o "$HOME/.local/bin/kubectl-argo-rollouts" \
+    https://github.com/argoproj/argo-rollouts/releases/download/v1.10.0/kubectl-argo-rollouts-linux-amd64
+  chmod +x "$HOME/.local/bin/kubectl-argo-rollouts"
+fi
 grep -q '.local/bin' "$HOME/.bashrc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-for h in gcloud terraform kubectl helm velero kubeseal openssl; do
+for h in gcloud terraform kubectl helm velero kubeseal kubectl-argo-rollouts openssl; do
   printf '  %-10s %s\n' "$h" "$(command -v $h || echo 'NO ENCONTRADO')" | tee -a "$LOG"
 done
 

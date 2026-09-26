@@ -26,10 +26,11 @@ flowchart TD
     T6["6. Helm: app raíz p9-raiz"]:::auto
 
     W0A["Ola 0: sealed-secrets<br/>adopta la llave restaurada"]:::auto
+    W0C["Ola 0: argo-rollouts + kyverno<br/>entrega progresiva y admisión"]:::auto
+    W1P["Ola 1: politicas<br/>ClusterPolicies en modo Enforce"]:::auto
     W0B["Ola 0: velero + node-agent<br/>sincroniza respaldos del bucket"]:::auto
     W1["Ola 1: Job restauracion-dr<br/>restaura ns datos del último respaldo"]:::auto
-    W2["Ola 2: datos<br/>PostgreSQL + API + PDB + CronJob"]:::auto
-    W3["Ola 3: sistema-p8<br/>microservicios P4/P5, Rollouts, políticas"]:::auto
+    W2["Ola 2: datos<br/>PostgreSQL + API (Rollout canary) + PDB + CronJob"]:::auto
     V["Verificación: apps Healthy,<br/>secretos, huella de datos, HTTP 200<br/>MARCA SERVICIO_RESPONDE"]:::auto
 
     M1 --> S1
@@ -40,12 +41,13 @@ flowchart TD
     INICIO --> T1 --> T2 --> T3 --> T4 --> T5 --> T6
     S1 -. "estado" .-> T1
     S3 -. "lee llave" .-> T4
-    T6 --> W0A & W0B
+    T6 --> W0A & W0B & W0C
+    W0C --> W1P --> W2
     S4 -. "manifiestos" .-> T6
     W0A --> W1
     W0B --> W1
     S2 -. "último respaldo" .-> W1
-    W1 --> W2 --> W3 --> V
+    W1 --> W2 --> V
 
     classDef auto fill:#d4edda,stroke:#2e7d32,color:#1b3a1f
     classDef manual fill:#fff3cd,stroke:#b8860b,color:#4a3800
@@ -59,5 +61,5 @@ flowchart TD
 | Llave (4) antes de ArgoCD (5) | Si el controlador de Sealed Secrets arranca sin llave, genera una nueva y los secretos del repositorio quedan ilegibles. |
 | Velero (ola 0) antes de restauración (ola 1) | La restauración necesita los CRDs de Velero y la sincronización de respaldos desde el bucket. |
 | Restauración (ola 1) antes de datos (ola 2) | Velero no sobrescribe un PVC existente: si ArgoCD creara primero la base de datos vacía, la restauración se omitiría. |
-| Datos (ola 2) antes de P8 (ola 3) | Los microservicios dependen de la base de datos y de los secretos ya descifrados. |
+| Kyverno (ola 0) y políticas (ola 1) antes de datos (ola 2) | Los pods de la aplicación se admiten ya con las políticas activas; Argo Rollouts debe existir para crear el `Rollout`. |
 | Salud de `Application` personalizada en ArgoCD | Sin ella las olas no esperan a que la ola anterior esté *Healthy*. |

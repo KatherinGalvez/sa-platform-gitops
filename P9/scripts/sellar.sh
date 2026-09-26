@@ -4,8 +4,8 @@
 #
 #   ./sellar.sh <namespace> <nombre> <archivo_salida> clave1=valor1 [clave2=valor2 ...]
 #
-# Ejemplo para un microservicio de P4/P5:
-#   ./sellar.sh pedidos db-pedidos ../../P8/gitops/pedidos/db-sealed.yaml usuario=app password=xyz
+# Ejemplo:
+#   ./sellar.sh datos otro-secreto ../gitops/cargas/datos/06-otro-sealed.yaml clave=valor
 source "$(dirname "$0")/lib.sh"
 
 [[ $# -lt 4 ]] && { echo "Uso: $0 <namespace> <nombre> <archivo_salida> clave=valor..."; exit 1; }

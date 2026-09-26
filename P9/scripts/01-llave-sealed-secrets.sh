@@ -3,10 +3,10 @@
 # en Google Secret Manager.
 #
 #   ./01-llave-sealed-secrets.sh                 -> genera una llave nueva
-#   ./01-llave-sealed-secrets.sh llave-p8.yaml   -> importa la llave de su cluster P8
+#   ./01-llave-sealed-secrets.sh llave.yaml      -> importa una llave exportada de otro cluster
 #
-# Para exportar la llave del cluster de la Practica 8 (si aun existe):
-#   kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > llave-p8.yaml
+# Exportar la llave de un cluster existente:
+#   kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > llave.yaml
 source "$(dirname "$0")/lib.sh"
 LOG="$EVIDENCIAS/01-llave-sealed-secrets.log"
 

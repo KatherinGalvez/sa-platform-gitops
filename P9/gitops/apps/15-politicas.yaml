@@ -1,0 +1,20 @@
+# Ola 1: politicas de admision (despues de que Kyverno este listo).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: politicas
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: __REPO_URL__
+    targetRevision: __REPO_RAMA__
+    path: __GITOPS_RUTA__/plataforma/politicas
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [SkipDryRunOnMissingResource=true]

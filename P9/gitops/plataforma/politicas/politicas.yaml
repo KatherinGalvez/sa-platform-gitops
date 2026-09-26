@@ -1,0 +1,74 @@
+# Politicas de admision en modo Enforce sobre el namespace de la aplicacion.
+# Un pod que las incumpla es RECHAZADO por la API de Kubernetes.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: prohibir-etiqueta-latest
+  annotations:
+    policies.kyverno.io/description: Las imagenes deben usar una version fija, nunca latest ni sin etiqueta.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: imagen-con-version
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [datos]
+      validate:
+        message: "Imagen sin version fija: use una etiqueta distinta de ':latest'."
+        pattern:
+          spec:
+            containers:
+              - image: "*:* & !*:latest"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: exigir-limite-memoria
+  annotations:
+    policies.kyverno.io/description: Todo contenedor debe declarar requests y limite de memoria.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: limites-de-memoria
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [datos]
+      validate:
+        message: "Cada contenedor debe declarar resources.requests.memory y resources.limits.memory."
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  requests:
+                    memory: "?*"
+                  limits:
+                    memory: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: exigir-etiqueta-app
+  annotations:
+    policies.kyverno.io/description: Todo pod debe llevar la etiqueta app (la usan Services, PDB y anti-afinidad).
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: etiqueta-app
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [datos]
+      validate:
+        message: "El pod debe tener la etiqueta 'app'."
+        pattern:
+          metadata:
+            labels:
+              app: "?*"

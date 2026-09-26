@@ -18,28 +18,27 @@ Cada vez que vea **📸 Cxx** tome una captura de pantalla y guárdela en `P9/ev
 
 ## 1. Subir la carpeta P9 al repositorio
 
-Desde su PC (PowerShell), copie la carpeta `P9` que le entregué dentro de `REPO\` y súbala:
+La carpeta `P9` va en la raíz del repositorio público `sa-platform-gitops` (ArgoCD la lee de ahí sin credenciales). Desde su PC:
 
 ```powershell
-cd "C:\Users\kater\Desktop\2S 2026\SA\LAB\Practicas\REPO"
+cd "C:\Users\kater\Desktop\2S 2026\SA\LAB\Practicas\sa-platform-gitops"
 git add P9
 git commit -m "P9: continuidad operativa y DR"
 git push
 ```
 
-El repositorio debe ser **público** (ArgoCD lo lee sin credenciales y la tabla de enlaces lo exige).
-
 ## 2. Clonar y configurar en Cloud Shell
 
 ```bash
-git clone https://github.com/USUARIO/REPO.git
-cd REPO/P9
+git clone https://github.com/KatherinGalvez/sa-platform-gitops.git
+cd sa-platform-gitops/P9
 cp p9.env.ejemplo p9.env
-nano p9.env        # PROYECTO, REPO_URL (y ZONA si quiere otra)
+sed -i "s/^PROYECTO=.*/PROYECTO=\"$(gcloud config get-value project)\"/" p9.env
+sed -i 's#^REPO_URL=.*#REPO_URL="https://github.com/KatherinGalvez/sa-platform-gitops.git"#' p9.env
 chmod +x scripts/*.sh
 ```
 
-> Si Cloud Shell se desconecta, vuelva a abrirlo y haga `cd REPO/P9`. Todos los scripts se pueden repetir sin romper nada.
+> Si Cloud Shell se desconecta, vuelva a abrirlo y haga `cd ~/sa-platform-gitops/P9`. Todos los scripts se pueden repetir sin romper nada.
 
 ## 3. Preparar el proyecto: estado remoto y capa persistente
 
@@ -62,12 +61,11 @@ Habilita APIs, instala `velero` y `kubeseal`, crea el bucket del **estado remoto
 ./scripts/02-configurar-gitops.sh         # rellena bucket/SA/repo y sella la contraseña de la BD
 ```
 
-> Si todavía tiene el clúster de la Práctica 8 y quiere conservar su llave, primero exporte la llave allí (`kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key -o yaml > llave-p8.yaml`), súbala a Cloud Shell y ejecute `./scripts/01-llave-sealed-secrets.sh llave-p8.yaml`. Si no, sus SealedSecrets de P8 deben volver a sellarse con `scripts/sellar.sh` (ver sección 4.1).
 
 Suba los cambios **desde Cloud Shell** (o descárguelos y súbalos desde su PC):
 
 ```bash
-cd ~/REPO
+cd ~/sa-platform-gitops
 git config user.email "3057796210301@ingenieria.usac.edu.gt"; git config user.name "Su Nombre"
 git add P9 && git commit -m "P9: configuración GitOps y secreto sellado" && git push
 cd P9
@@ -79,15 +77,6 @@ cd P9
 |---|---|---|
 | 📸 C04 | Consola → **Security → Secret Manager**: `p9-sealed-secrets-crt` y `p9-sealed-secrets-key` | 2.4 |
 | 📸 C05 | GitHub: archivo `P9/gitops/cargas/datos/05-db-credenciales-sealed.yaml` (se ve cifrado) | 2.4 |
-
-### 4.1 Integrar los microservicios de P4/P5 (flujo de la Práctica 8)
-
-1. Renombre `gitops/apps/40-sistema-p8.yaml.ejemplo` a `40-sistema-p8.yaml` y ajuste `path:` a la carpeta GitOps de su P8.
-2. Si su P8 instalaba Sealed Secrets, quítelo de allí (ya lo instala `00-sealed-secrets.yaml`).
-3. Vuelva a sellar los secretos de sus microservicios con la llave nueva, por ejemplo:
-   `./scripts/sellar.sh <namespace> <nombre-secreto> ../P8/gitops/<ruta>/sealed.yaml CLAVE=valor`
-4. Agregue a cada microservicio el bloque de `plantillas/resiliencia-microservicio.yaml` (réplicas ≥ 2, anti-afinidad, PDB, probes).
-5. Commit y push. Cambie en `bootstrap.sh` el `-ge 5` por `-ge 6` si agregó la app `sistema-p8`.
 
 ## 5. Primer bootstrap (punto de entrada único)
 
@@ -116,7 +105,7 @@ En Cloud Shell → botón **Vista previa en la web** → **Vista previa en el pu
 
 | | Captura | Criterio |
 |---|---|---|
-| 📸 C09 | ArgoCD: árbol de `p9-raiz` con las apps hijas (sealed-secrets, velero, restauracion-dr, datos, sistema-p8) todas *Synced/Healthy* | 2.1 |
+| 📸 C09 | ArgoCD: árbol de `p9-raiz` con las apps hijas (sealed-secrets, velero, argo-rollouts, kyverno, politicas, restauracion-dr, datos) todas *Synced/Healthy* | 2.1 |
 | 📸 C10 | ArgoCD: app `datos` abierta (StatefulSet, PVC, PDB, CronJob, Deployment) | 2.5 |
 
 ## 6. Respaldo con Velero
@@ -135,6 +124,23 @@ El schedule `velero-horario` respalda cada hora. Para no esperar, fuerce el prim
 | 📸 C13 | Consola → bucket `-p9-velero` → carpetas `backups/` y `kopia/` | 2.3 |
 
 Deje pasar **al menos una ejecución programada** (espere al minuto 00 de la siguiente hora) antes de las pruebas 8 y 9: el RPO se mide contra el respaldo programado, no contra uno forzado.
+
+## 6.1 Flujo de GitOps, entrega progresiva y políticas (lo que era la Práctica 8)
+
+```bash
+./scripts/verificar-flujo.sh
+```
+
+Demostración de un despliegue canary: en GitHub edite `P9/gitops/cargas/datos/30-servicio-datos.yaml`, cambie `VERSION_DESPLIEGUE` de `"v1"` a `"v2"` y haga commit. ArgoCD lo detecta en unos 3 min (o pulse *Refresh* en la app `datos`). Obsérvelo con:
+
+```bash
+kubectl argo rollouts get rollout servicio-datos -n datos --watch
+```
+
+| | Captura | Criterio |
+|---|---|---|
+| 📸 C25 | Rollout a mitad del canary: 1 réplica nueva (`34%`) y 2 antiguas, en pausa | flujo P8 |
+| 📸 C26 | Salida de `verificar-flujo.sh`: `prohibir-etiqueta-latest` rechaza el pod `nginx:latest` | flujo P8 |
 
 ## 7. Prueba de pérdida de nodo
 
@@ -178,7 +184,7 @@ Destruye el clúster **y sus discos**, lo reconstruye con `bootstrap.sh` y resta
 | 📸 C21 | Registro del job de restauración automática: "Restaurando datos desde el respaldo …" | 2.3 |
 | 📸 C22 | `verificar-secretos.sh`: huella de Secret Manager = huella en el clúster, SealedSecret sincronizado | 2.4 |
 | 📸 C23 | Resumen final con RTO y RPO reales | 1.2 |
-| 📸 C24 | ArgoCD después de la reconstrucción: todo Synced/Healthy, incluido el sistema de P8 (Rollouts, políticas) | 2.1 |
+| 📸 C24 | `./scripts/verificar-flujo.sh` después de la reconstrucción: apps Synced/Healthy, Rollout sano y pod `:latest` rechazado por Kyverno | 2.1 / flujo P8 |
 
 ## 10. Documentación y video
 
@@ -199,4 +205,4 @@ Destruye el clúster **y sus discos**, lo reconstruye con `bootstrap.sh` y resta
 | App `velero` en *Degraded* / BSL `Unavailable` | Workload Identity aún propagándose | Espere 2-3 min; `kubectl -n velero logs deploy/velero \| grep -i error` |
 | App `datos` con pods en `CreateContainerConfigError` | SealedSecret sellado con otra llave | `./scripts/verificar-secretos.sh`; vuelva a ejecutar el paso 4 |
 | Error de imagen `alpine/k8s` en `restauracion-dr` | Etiqueta no disponible | Cambie la imagen en `gitops/plataforma/restauracion/restauracion-dr.yaml` por otra con `kubectl` y `sh` |
-| Políticas de admisión de P8 bloquean pods de velero/datos | Reglas de Kyverno/Gatekeeper | Excluya los namespaces `velero`, `kube-system` y `datos-restaurado` en esas políticas |
+| Un pod de `datos` es rechazado por Kyverno | Le falta versión fija, límite de memoria o etiqueta `app` | Lea el mensaje en `kubectl -n datos get events`; las políticas solo aplican al namespace `datos` |

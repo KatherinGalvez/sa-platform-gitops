@@ -66,7 +66,7 @@ El script hace, en orden y sin pasos manuales:
 
 1. Terraform capa persistente (verifica bucket, cuenta de servicio y Secret Manager).
 2. Terraform capa clúster: GKE → llave de Sealed Secrets desde Secret Manager → ArgoCD → app raíz `p9-raiz`.
-3. ArgoCD por olas: `sealed-secrets` y `velero` → `restauracion-dr` (restaura `datos` del último respaldo) → `datos` → `sistema-p8`.
+3. ArgoCD por olas: `sealed-secrets`, `velero`, `argo-rollouts`, `kyverno` → `politicas` y `restauracion-dr` (restaura `datos` del último respaldo) → `datos`.
 4. Verifica secretos, contenido de la base de datos y respuesta HTTP.
 
 Mientras corre, las líneas `Esperando aplicaciones:` indican qué falta. ✅ Verificación final: aparecen `MARCA SERVICIO_RESPONDE` y `Duración total del bootstrap`.
@@ -74,7 +74,8 @@ Mientras corre, las líneas `Esperando aplicaciones:` indican qué falta. ✅ Ve
 ## 4. Verificar la recuperación (3 min)
 
 ```bash
-kubectl -n argocd get applications              # todas Synced / Healthy
+kubectl -n argocd get applications              # las 8 Synced / Healthy
+./scripts/verificar-flujo.sh                    # Rollout sano y políticas rechazando ':latest'
 kubectl -n velero logs job/restauracion-dr      # "Restaurando datos desde el respaldo ..." y fase Completed
 ./scripts/verificar-secretos.sh                 # huellas iguales y "llaves en el cluster: 1"
 kubectl -n datos exec postgres-0 -- psql -U app -d p9 -c "select count(*), max(creado) from marcas;"

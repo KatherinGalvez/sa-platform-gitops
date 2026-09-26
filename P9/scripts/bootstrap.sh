@@ -8,10 +8,9 @@
 #   1. Terraform (capa persistente, idempotente)   -> bucket, SA, Secret Manager
 #   2. Terraform (capa cluster)                     -> GKE, llave Sealed Secrets, ArgoCD, app raiz
 #   3. ArgoCD app-of-apps (p9-raiz) por olas:
-#        ola 0 sealed-secrets + velero
-#        ola 1 restauracion-dr  (restaura datos desde el ultimo respaldo si existe)
-#        ola 2 datos            (PostgreSQL + API + PDB)
-#        ola 3 sistema-p8       (microservicios P4/P5, Rollouts, politicas)
+#        ola 0 sealed-secrets, velero, argo-rollouts, kyverno
+#        ola 1 politicas (Kyverno) + restauracion-dr (restaura datos si hay respaldo)
+#        ola 2 datos  (PostgreSQL + API como Rollout canary + PDB)
 #   4. Verificaciones: aplicaciones Synced/Healthy, secretos descifrados,
 #      contenido de la base de datos y API respondiendo.
 # Cada fase deja una MARCA con fecha/hora en evidencias/ para calcular el RTO.
@@ -49,7 +48,7 @@ while :; do
     -o jsonpath='{range .items[*]}{.metadata.name}{"="}{.status.sync.status}{"/"}{.status.health.status}{"\n"}{end}' 2>/dev/null || true)
   PENDIENTES=$(echo "$ESTADO" | grep -v '=Synced/Healthy$' | grep . || true)
   TOTAL=$(echo "$ESTADO" | grep -c . || true)
-  if [[ -z "$PENDIENTES" && "$TOTAL" -ge 5 ]]; then break; fi
+  if [[ -z "$PENDIENTES" && "$TOTAL" -ge 8 ]]; then break; fi
   if (( $(epoch) - ULTIMO_REPORTE >= 60 )); then
     log "Esperando aplicaciones: $(echo "$PENDIENTES" | tr '\n' ' ')"
     ULTIMO_REPORTE=$(epoch)
@@ -69,7 +68,7 @@ kubectl -n velero get restores 2>/dev/null | tee -a "$LOG" || true
 # ---- 4. Verificaciones ------------------------------------------------------
 seccion "4/4 Verificaciones"
 kubectl -n datos rollout status statefulset/postgres --timeout=10m | tee -a "$LOG"
-kubectl -n datos rollout status deployment/servicio-datos --timeout=10m | tee -a "$LOG"
+kubectl -n datos wait --for=condition=Healthy rollout/servicio-datos --timeout=10m | tee -a "$LOG"
 
 log "Secretos: SealedSecret -> Secret"
 kubectl -n datos get sealedsecret,secret db-credenciales 2>&1 | tee -a "$LOG"

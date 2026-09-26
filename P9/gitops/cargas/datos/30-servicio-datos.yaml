@@ -12,18 +12,28 @@ spec:
       port: 3000
       targetPort: http
 ---
-apiVersion: apps/v1
-kind: Deployment
+# Entrega progresiva (flujo de la Practica 8): cada cambio en Git se publica
+# primero a 1 de 3 replicas, luego a 2 y finalmente a todas, con pausas para
+# observar. Si los pods nuevos no pasan las probes, el Rollout no avanza.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: servicio-datos
   labels: { app: servicio-datos, practica: p9 }
 spec:
   replicas: 3
+  revisionHistoryLimit: 3
   selector:
     matchLabels: { app: servicio-datos }
   strategy:
-    type: RollingUpdate
-    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+    canary:
+      maxSurge: 1
+      maxUnavailable: 0
+      steps:
+        - setWeight: 34
+        - pause: { duration: 45s }
+        - setWeight: 67
+        - pause: { duration: 45s }
   template:
     metadata:
       labels: { app: servicio-datos, practica: p9 }
@@ -66,6 +76,9 @@ spec:
               value: web_anon
             - name: PGRST_ADMIN_SERVER_PORT
               value: "3001"
+            # Cambie este valor en Git para demostrar un despliegue canary
+            - name: VERSION_DESPLIEGUE
+              value: "v1"
           readinessProbe:
             httpGet: { path: /ready, port: admin }
             periodSeconds: 5

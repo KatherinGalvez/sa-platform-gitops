@@ -8,7 +8,7 @@
 
 | Objetivo | Valor | Justificación |
 |---|---|---|
-| **RTO** | **45 min** | Crear un clúster GKE zonal y su node pool toma 10-15 min; ArgoCD 3-5 min; Velero, Sealed Secrets y la restauración de un volumen pequeño (2 GiB, Kopia) 5-8 min; los microservicios de P8 3-5 min. Suma ≈ 30 min más un margen del 50 % por variabilidad de la nube. Para un sistema académico sin clientes externos, 45 min es aceptable. |
+| **RTO** | **45 min** | Crear un clúster GKE zonal y su node pool toma 10-15 min; ArgoCD 3-5 min; Velero, Sealed Secrets y la restauración de un volumen pequeño (2 GiB, Kopia) 5-8 min; Argo Rollouts, Kyverno y el despliegue canary 3-5 min. Suma ≈ 30 min más un margen del 50 % por variabilidad de la nube. Para un sistema académico sin clientes externos, 45 min es aceptable. |
 | **RPO** | **60 min** | El schedule `velero-horario` respalda cada hora. El peor caso es perder lo escrito desde el inicio del último respaldo hasta el desastre: hasta 60 min más la duración del respaldo (< 1 min). Un RPO menor exigiría respaldos más frecuentes o replicación continua de la BD. |
 
 ## 2. Escenario ejecutado

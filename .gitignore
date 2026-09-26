@@ -1,4 +1,8 @@
-argocd-application.yaml
+﻿argocd-application.yaml
 app-status.txt
-
 charts/sa-platform/values-secrets.yaml
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+p9.env
