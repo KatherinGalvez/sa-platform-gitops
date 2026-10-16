@@ -18,7 +18,7 @@ El ecosistema de microservicios de las prácticas anteriores se vuelve **recuper
 | Restauración de datos | [`evidencias/restauracion-datos-20261015-212512.log`](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/restauracion-datos-20261015-212512.log) · [resumen](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/resumen-restauracion-20261015-212512.md) |
 | Prueba de pérdida de nodo | [`evidencias/perdida-nodo-20261015-210954.log`](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/perdida-nodo-20261015-210954.log) · [sonda segundo a segundo](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/sonda-20261015-210954.log) (149/149 respuestas OK, 100 %) |
 | RTO y RPO declarados | Objetivo **RTO 45 min / RPO 60 min** · Medido **RTO 27 min 09 s** · **RPO 25 min 19 s** (respaldo programado) y 1 min 38 s (DR). [Informe](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/docs/INFORME-DR.md) |
-| Video demostrativo | `<<URL DEL VIDEO>>` — minutaje abajo |
+| Video demostrativo | `https://drive.google.com/file/d/1-z41MkDcqLS0TH0WAP81Kh1RG9w0C8WZ/view?usp=sharing` — 7:01 min |
 
 ## Documentos
 
