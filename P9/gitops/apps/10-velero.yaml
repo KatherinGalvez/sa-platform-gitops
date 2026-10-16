@@ -29,7 +29,7 @@ spec:
           server:
             name: velero-server
             annotations:
-              iam.gke.io/gcp-service-account: __VELERO_GSA__
+              iam.gke.io/gcp-service-account: velero-p9@sa-p6-202006633.iam.gserviceaccount.com
         snapshotsEnabled: false
         deployNodeAgent: true
         configuration:
@@ -38,11 +38,11 @@ spec:
           backupStorageLocation:
             - name: default
               provider: velero.io/gcp
-              bucket: __VELERO_BUCKET__
+              bucket: sa-p6-202006633-p9-velero
               default: true
               backupSyncPeriod: 30s
               config:
-                serviceAccount: __VELERO_GSA__
+                serviceAccount: velero-p9@sa-p6-202006633.iam.gserviceaccount.com
           volumeSnapshotLocation: []
         # Calendario y retencion: un respaldo por hora, conservado 7 dias.
         # Nombre final del schedule: velero-horario

@@ -1,0 +1,11 @@
+
+===== Reemplazando marcadores =====
+[2026-10-15 18:21:25 CST]   actualizado: gitops/apps/30-datos.yaml
+[2026-10-15 18:21:25 CST]   actualizado: gitops/apps/20-restauracion-dr.yaml
+[2026-10-15 18:21:25 CST]   actualizado: gitops/apps/10-velero.yaml
+[2026-10-15 18:21:25 CST]   actualizado: gitops/apps/15-politicas.yaml
+
+===== Secreto de la base de datos =====
+[2026-10-15 18:21:26 CST] Sellado gitops/cargas/datos/05-db-credenciales-sealed.yaml (la contrasena en claro no se guarda en ningun archivo)
+[2026-10-15 18:21:26 CST] Ahora haga commit y push de P9/ para que ArgoCD lo pueda leer:
+[2026-10-15 18:21:26 CST]   git add P9 && git commit -m 'P9: GitOps de DR' && git push
