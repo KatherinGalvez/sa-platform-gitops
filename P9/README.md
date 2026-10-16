@@ -1,7 +1,7 @@
 # Práctica 9 — Continuidad operativa y recuperación ante desastres
 
 Universidad de San Carlos de Guatemala · Facultad de Ingeniería · Software Avanzado
-Estudiante: `<<Nombre>>` · Carné: `<<carné>>`
+Estudiante: Katherin Galvez · Carné: 202006633
 
 El ecosistema de microservicios de las prácticas anteriores se vuelve **recuperable**: el entorno completo se destruye (clúster y discos) y se reconstruye con un solo comando en Google Cloud (GKE), restaurando datos y secretos, con tiempos medidos contra objetivos declarados antes de las pruebas.
 
@@ -9,16 +9,16 @@ El ecosistema de microservicios de las prácticas anteriores se vuelve **recuper
 
 | Ítem | Enlace o dato |
 |---|---|
-| Repositorio GitOps | `<<https://github.com/USUARIO/REPO>>` — carpeta [`P9/gitops`](./gitops) |
-| Aplicación raíz en ArgoCD | `p9-raiz`, namespace `argocd` (definida en [`terraform/cluster/main.tf`](./terraform/cluster/main.tf), lee [`gitops/apps`](./gitops/apps)) |
-| Punto de entrada del bootstrap | [`P9/scripts/bootstrap.sh`](./scripts/bootstrap.sh) |
-| Backend remoto de Terraform | Google Cloud Storage `gs://<<proyecto>>-p9-tfstate`, prefijos `p9/persistente` y `p9/cluster`, bloqueo nativo de GCS, bucket versionado |
-| Schedule de Velero | `velero-horario` (namespace `velero`), cada hora, TTL 168 h → `gs://<<proyecto>>-p9-velero` ([`gitops/apps/10-velero.yaml`](./gitops/apps/10-velero.yaml)) |
-| Reconstrucción cronometrada | [`evidencias/dr-<<fecha>>.log`](./evidencias) y [`evidencias/resumen-dr-<<fecha>>.md`](./evidencias) |
-| Restauración de datos | [`evidencias/restauracion-datos-<<fecha>>.log`](./evidencias) y [`evidencias/resumen-restauracion-<<fecha>>.md`](./evidencias) |
-| Prueba de pérdida de nodo | [`evidencias/perdida-nodo-<<fecha>>.log`](./evidencias) y [`evidencias/sonda-<<fecha>>.log`](./evidencias) |
-| RTO y RPO declarados | Objetivo RTO **45 min** / RPO **60 min** · Medido RTO `<<>>` / RPO `<<>>` ([informe](./docs/INFORME-DR.md)) |
-| Video demostrativo | `<<URL>>` — minutaje abajo |
+| Repositorio GitOps | https://github.com/KatherinGalvez/sa-platform-gitops (público) — manifiestos en [`P9/gitops`](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/gitops) |
+| Aplicación raíz en ArgoCD | **`p9-raiz`**, namespace **`argocd`** (creada por Terraform en [`terraform/cluster/main.tf`](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/terraform/cluster/main.tf); lee [`P9/gitops/apps`](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/gitops/apps)) |
+| Punto de entrada del bootstrap | **`P9/scripts/bootstrap.sh`** — [ver script](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/scripts/bootstrap.sh) |
+| Backend remoto de Terraform | **Google Cloud Storage** (`backend "gcs"`), bucket `sa-p6-202006633-p9-tfstate`, prefijos `p9/persistente` y `p9/cluster`; bloqueo nativo de GCS (`.tflock`) y bucket versionado. Sin credenciales en el repositorio |
+| Schedule de Velero | **`velero-horario`** (ns `velero`): `0 * * * *`, retención 168 h, volúmenes con Kopia → `gs://sa-p6-202006633-p9-velero`. Además **`velero-llave`**: diario, retención 720 h (llave de Sealed Secrets). [Manifiesto](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/gitops/apps/10-velero.yaml) |
+| Reconstrucción cronometrada | [`evidencias/dr-20261015-224733.log`](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/dr-20261015-224733.log) · [resumen](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/resumen-dr-20261015-224733.md) |
+| Restauración de datos | [`evidencias/restauracion-datos-20261015-212512.log`](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/restauracion-datos-20261015-212512.log) · [resumen](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/resumen-restauracion-20261015-212512.md) |
+| Prueba de pérdida de nodo | [`evidencias/perdida-nodo-20261015-210954.log`](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/perdida-nodo-20261015-210954.log) · [sonda segundo a segundo](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/evidencias/sonda-20261015-210954.log) (149/149 respuestas OK, 100 %) |
+| RTO y RPO declarados | Objetivo **RTO 45 min / RPO 60 min** · Medido **RTO 27 min 09 s** · **RPO 25 min 19 s** (respaldo programado) y 1 min 38 s (DR). [Informe](https://github.com/KatherinGalvez/sa-platform-gitops/blob/main/P9/docs/INFORME-DR.md) |
+| Video demostrativo | `<<URL DEL VIDEO>>` — minutaje abajo |
 
 ## Documentos
 

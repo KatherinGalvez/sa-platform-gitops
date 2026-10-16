@@ -10,12 +10,12 @@
 
 | Dato | Valor |
 |---|---|
-| Proyecto GCP | `<<ID del proyecto>>` |
+| Proyecto GCP | `sa-p6-202006633` |
 | Zona del clúster | `us-central1-a` |
 | Nombre del clúster | `p9-dr` |
-| Repositorio (público) | `<<URL del repositorio>>` |
-| Bucket de estado Terraform | `gs://<<proyecto>>-p9-tfstate` (prefijos `p9/persistente`, `p9/cluster`) |
-| Bucket de respaldos | `gs://<<proyecto>>-p9-velero` |
+| Repositorio (público) | `https://github.com/KatherinGalvez/sa-platform-gitops.git` |
+| Bucket de estado Terraform | `gs://sa-p6-202006633-p9-tfstate` (prefijos `p9/persistente`, `p9/cluster`) |
+| Bucket de respaldos | `gs://sa-p6-202006633-p9-velero` |
 | Llave de Sealed Secrets | Secret Manager: `p9-sealed-secrets-crt`, `p9-sealed-secrets-key` |
 | Aplicación raíz ArgoCD | `p9-raiz` en el namespace `argocd` |
 | Schedule de respaldos | `velero-horario` (cada hora, retención 7 días) |
@@ -27,9 +27,9 @@
 Abra Cloud Shell (ícono `>_` en <https://console.cloud.google.com>) y ejecute:
 
 ```bash
-gcloud config set project <<ID del proyecto>>
+gcloud config set project sa-p6-202006633
 gcloud container clusters list
-gcloud storage ls gs://<<proyecto>>-p9-velero/backups/ | tail -3
+gcloud storage ls gs://sa-p6-202006633-p9-velero/backups/ | tail -3
 ```
 
 | Si ve… | Entonces… |
@@ -44,10 +44,10 @@ gcloud storage ls gs://<<proyecto>>-p9-velero/backups/ | tail -3
 ## 2. Preparar el entorno (3 min)
 
 ```bash
-git clone <<URL del repositorio>> repo && cd repo/P9
+git clone https://github.com/KatherinGalvez/sa-platform-gitops.git repo && cd repo/P9
 cp p9.env.ejemplo p9.env
-sed -i 's/^PROYECTO=.*/PROYECTO="<<ID del proyecto>>"/' p9.env
-sed -i 's#^REPO_URL=.*#REPO_URL="<<URL del repositorio>>"#' p9.env
+sed -i 's/^PROYECTO=.*/PROYECTO="sa-p6-202006633"/' p9.env
+sed -i 's#^REPO_URL=.*#REPO_URL="https://github.com/KatherinGalvez/sa-platform-gitops.git"#' p9.env
 chmod +x scripts/*.sh
 ./scripts/00-preparar-gcp.sh
 ```
@@ -66,6 +66,7 @@ El script hace, en orden y sin pasos manuales:
 
 1. Terraform capa persistente (verifica bucket, cuenta de servicio y Secret Manager).
 2. Terraform capa clúster: GKE → llave de Sealed Secrets desde Secret Manager → ArgoCD → app raíz `p9-raiz`.
+   (Si el comando se interrumpe, por ejemplo porque se cerró Cloud Shell, vuelva a ejecutarlo: es idempotente y continúa desde donde quedó.)
 3. ArgoCD por olas: `sealed-secrets`, `velero`, `argo-rollouts`, `kyverno` → `politicas` y `restauracion-dr` (restaura `datos` del último respaldo) → `datos`.
 4. Verifica secretos, contenido de la base de datos y respuesta HTTP.
 
@@ -102,6 +103,7 @@ La **pérdida de datos** es el intervalo entre la última marca recuperada y T0.
 | `terraform apply` falla por cuota de CPU | `gcloud compute regions describe us-central1 --format="value(quotas)"` | Editar `TIPO_MAQUINA="e2-medium"` en `p9.env` y repetir el paso 3 |
 | Secret Manager "NOT_FOUND" en Terraform | La llave no existe | **Si hay un respaldo de la llave**, súbalo con `./scripts/01-llave-sealed-secrets.sh <archivo>`. Si no existe ninguna copia, los secretos sellados son irrecuperables: genere llave nueva, vuelva a sellar (`scripts/sellar.sh`) y registre el incidente |
 | App `velero` Degraded, BSL `Unavailable` | `kubectl -n velero get bsl default -o yaml` | Esperar 3 min (Workload Identity); si sigue, repetir el paso 3 |
+| Job `restauracion-dr` dice "ya tiene la base de datos" justo tras reconstruir | Es normal en sincronizaciones posteriores: el hook corre en cada sync. Confirme con `velero restore get` que existe un `dr-…` Completed y que `primera_marca` es anterior al incidente |
 | Job `restauracion-dr` dice "arranque en limpio" pero hay respaldos | Respaldos aún no sincronizados | `kubectl -n velero delete job restauracion-dr` (ArgoCD lo recrea) **antes** de que la app `datos` cree la BD; si ya la creó, usar Anexo A |
 | Pods de `datos` en `CreateContainerConfigError` | `kubectl -n datos get sealedsecret db-credenciales -o yaml` → condición en error | Verificar huellas con `verificar-secretos.sh`; si difieren, la llave del clúster no es la de Secret Manager: `kubectl -n kube-system delete pod -l app.kubernetes.io/name=sealed-secrets` |
 | `postgres-0` no arranca tras restaurar (datos corruptos) | `kubectl -n datos logs postgres-0` | Cada respaldo trae un volcado consistente en `/var/lib/postgresql/data/volcado/p9.sql`: copiarlo con `kubectl cp`, borrar el PVC para obtener una BD nueva y cargarlo con `psql -U app -d p9 -f p9.sql` |
