@@ -37,6 +37,13 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: kyverno
+  # Kyverno inyecta el caBundle de su webhook de conversion en sus propios
+  # CRDs: esa diferencia es esperada y no debe marcar la app como OutOfSync.
+  ignoreDifferences:
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jqPathExpressions:
+        - .spec.conversion
   syncPolicy:
     automated: { prune: true, selfHeal: true }
-    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    syncOptions: [CreateNamespace=true, ServerSideApply=true, RespectIgnoreDifferences=true]

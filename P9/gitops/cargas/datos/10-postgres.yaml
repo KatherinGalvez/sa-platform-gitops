@@ -1,5 +1,9 @@
 # Base de datos con volumen persistente (StorageClass por defecto de GKE).
-# 1 replica: es un PUNTO UNICO DE FALLO declarado (ver informe de DR).
+# 2 replicas: postgres-0 es el PRIMARIO (lecturas y escrituras) y postgres-1 una
+# replica en espera (hot standby, solo lectura) alimentada por replicacion en
+# streaming. Si se pierde el nodo del primario, la API sigue respondiendo
+# lecturas desde la replica; las ESCRITURAS siguen dependiendo del primario
+# (punto unico de fallo declarado en el informe de DR: no hay failover automatico).
 apiVersion: v1
 kind: Service
 metadata:
@@ -12,6 +16,53 @@ spec:
     - name: pg
       port: 5432
 ---
+# Escrituras: siempre al primario
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-primario
+  labels: { app: postgres, practica: p9 }
+spec:
+  selector:
+    app: postgres
+    statefulset.kubernetes.io/pod-name: postgres-0
+  ports:
+    - name: pg
+      port: 5432
+---
+# Reglas de acceso declarativas (fuera del volumen): permiten la replicacion
+# tambien en volumenes inicializados o restaurados antes de este cambio.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-hba
+  labels: { app: postgres, practica: p9 }
+data:
+  pg_hba.conf: |
+    local   all          all                    trust
+    host    all          all          127.0.0.1/32  trust
+    host    all          all          ::1/128       trust
+    local   replication  all                    trust
+    host    replication  all          all       scram-sha-256
+    host    all          all          all       scram-sha-256
+  iniciar-replica.sh: |
+    #!/bin/sh
+    # Solo en postgres-1 (o superior): se reconstruye SIEMPRE desde el primario.
+    # Asi, un volumen restaurado por Velero o desfasado nunca queda inconsistente.
+    set -e
+    ORD="${HOSTNAME##*-}"
+    if [ "$ORD" = "0" ]; then echo "postgres-0 es el primario: nada que hacer"; exit 0; fi
+    echo "Esperando al primario postgres-0..."
+    until pg_isready -h postgres-0.postgres -U "$POSTGRES_USER" -d p9 >/dev/null 2>&1; do sleep 2; done
+    rm -rf "$PGDATA"
+    PGPASSWORD="$POSTGRES_PASSWORD" pg_basebackup -h postgres-0.postgres -U "$POSTGRES_USER" \
+      -D "$PGDATA" -X stream -c fast
+    chmod 700 "$PGDATA"
+    touch "$PGDATA/standby.signal"
+    echo "primary_conninfo = 'host=postgres-0.postgres port=5432 user=$POSTGRES_USER password=$POSTGRES_PASSWORD application_name=$HOSTNAME'" \
+      >> "$PGDATA/postgresql.auto.conf"
+    echo "Replica $HOSTNAME lista (standby de postgres-0)"
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -19,7 +70,7 @@ metadata:
   labels: { app: postgres, practica: p9 }
 spec:
   serviceName: postgres
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels: { app: postgres }
   template:
@@ -27,11 +78,12 @@ spec:
       labels: { app: postgres, practica: p9 }
       annotations:
         # Antes de copiar el volumen, Velero deja un volcado CONSISTENTE dentro
-        # del mismo volumen (copia de seguridad logica de respaldo) y fuerza un
-        # CHECKPOINT para minimizar lo pendiente en el WAL.
+        # del mismo volumen y fuerza un CHECKPOINT para minimizar lo pendiente
+        # en el WAL. Si falla (p. ej. en la replica), el respaldo continua.
         pre.hook.backup.velero.io/container: postgres
         pre.hook.backup.velero.io/command: '["/bin/sh","-c","mkdir -p /var/lib/postgresql/data/volcado && pg_dump -U \"$POSTGRES_USER\" -d p9 -f /var/lib/postgresql/data/volcado/p9.sql && psql -U \"$POSTGRES_USER\" -d p9 -c CHECKPOINT"]'
         pre.hook.backup.velero.io/timeout: 120s
+        pre.hook.backup.velero.io/on-error: Continue
     spec:
       securityContext:
         runAsNonRoot: true
@@ -39,9 +91,42 @@ spec:
         runAsGroup: 999
         fsGroup: 999
       terminationGracePeriodSeconds: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app: postgres }
+      initContainers:
+        - name: iniciar-replica
+          image: postgres:16.4
+          command: ["/bin/sh", "/config/iniciar-replica.sh"]
+          env:
+            - name: POSTGRES_USER
+              valueFrom: { secretKeyRef: { name: db-credenciales, key: usuario } }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: db-credenciales, key: password } }
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: hba
+              mountPath: /config
       containers:
         - name: postgres
           image: postgres:16.4
+          args:
+            - postgres
+            - -c
+            - hba_file=/config/pg_hba.conf
+            - -c
+            - wal_keep_size=256MB
           ports:
             - containerPort: 5432
               name: pg
@@ -73,9 +158,13 @@ spec:
               mountPath: /docker-entrypoint-initdb.d
             - name: run
               mountPath: /var/run/postgresql
+            - name: hba
+              mountPath: /config
       volumes:
         - name: init
           configMap: { name: postgres-init }
+        - name: hba
+          configMap: { name: postgres-hba }
         - name: run
           emptyDir: {}
   volumeClaimTemplates:

@@ -63,6 +63,29 @@ spec:
                 - datos
               defaultVolumesToFsBackup: true
               snapshotVolumes: false
+          # Segunda copia de la llave de Sealed Secrets (la primera vive en
+          # Google Secret Manager): respaldo diario del Secret de la llave en
+          # kube-system hacia el mismo bucket externo, retenido 30 dias.
+          # Nombre final del schedule: velero-llave
+          llave:
+            disabled: false
+            schedule: "15 3 * * *"
+            useOwnerReferencesInBackup: false
+            skipImmediately: true
+            labels:
+              practica: p9
+            template:
+              ttl: 720h0m0s
+              storageLocation: default
+              includedNamespaces:
+                - kube-system
+              includedResources:
+                - secrets
+              labelSelector:
+                matchLabels:
+                  sealedsecrets.bitnami.com/sealed-secrets-key: active
+              defaultVolumesToFsBackup: false
+              snapshotVolumes: false
         resources:
           requests: { cpu: 100m, memory: 128Mi }
           limits: { memory: 512Mi }
@@ -73,9 +96,17 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: velero
+  # Velero modifica el spec de sus Schedule en ejecucion (p. ej. apaga
+  # skipImmediately tras la primera omision): se ignora para no quedar OutOfSync.
+  ignoreDifferences:
+    - group: velero.io
+      kind: Schedule
+      jsonPointers:
+        - /spec
   syncPolicy:
     automated: { prune: true, selfHeal: true }
     syncOptions:
+      - RespectIgnoreDifferences=true
       - CreateNamespace=true
       - ServerSideApply=true
       - SkipDryRunOnMissingResource=true

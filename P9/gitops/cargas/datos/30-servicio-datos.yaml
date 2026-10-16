@@ -69,7 +69,10 @@ spec:
             - name: DB_PASSWORD
               valueFrom: { secretKeyRef: { name: db-credenciales, key: password } }
             - name: PGRST_DB_URI
-              value: postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/p9
+              # Primero el primario; si no responde, la replica (solo lectura)
+              value: postgres://$(DB_USER):$(DB_PASSWORD)@postgres-0.postgres:5432,postgres-1.postgres:5432/p9
+            - name: PGRST_DB_CHANNEL_ENABLED
+              value: "false"
             - name: PGRST_DB_SCHEMAS
               value: public
             - name: PGRST_DB_ANON_ROLE

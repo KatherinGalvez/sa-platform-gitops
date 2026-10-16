@@ -36,12 +36,12 @@ El ecosistema de microservicios de las prácticas anteriores se vuelve **recuper
 |---|---|
 | Volúmenes de BD sin respaldo | Velero + Kopia (respaldo de archivos del volumen) hacia GCS multi-región, schedule horario, retención 7 días + ciclo de vida de 30 días en el bucket |
 | Estado de Terraform en la máquina del estudiante | Backend GCS con bloqueo y versionado; dos capas: **persistente** (sobrevive) y **clúster** (efímera) |
-| Llave de Sealed Secrets solo dentro del clúster | Llave en Google Secret Manager; Terraform la reinyecta en `kube-system` **antes** de instalar el controlador; renovación automática desactivada |
+| Llave de Sealed Secrets solo dentro del clúster | **Respaldo de la llave de Sealed Secrets** en dos lugares fuera del clúster: Google Secret Manager (fuente para la reconstrucción; Terraform la reinyecta en `kube-system` **antes** de instalar el controlador) y el schedule `velero-llave`, que respalda a diario el Secret de la llave de `kube-system` en el bucket de Velero (TTL 30 días). Renovación automática desactivada |
 | Reconstrucción manual | `bootstrap.sh` → Terraform (GKE + ArgoCD + app raíz) → app-of-apps por olas con restauración automática de datos |
-| Caída de un nodo | 3 réplicas de la API, anti-afinidad por nodo, `topologySpreadConstraints`, PDB `minAvailable: 2`, probes de arranque/vida/disponibilidad |
+| Caída de un nodo | PostgreSQL primario + réplica en espera (2 réplicas, en nodos distintos), 3 réplicas de la API, anti-afinidad por nodo, `topologySpreadConstraints`, PDB `minAvailable: 2`, probes de arranque/vida/disponibilidad |
 | Flujo de la Práctica 8 (GitOps, entrega progresiva, admisión) | ArgoCD app-of-apps, la API se publica como `Rollout` canary (34 % → 67 % → 100 %) y Kyverno aplica 3 políticas `Enforce`; todo se reconstruye en el mismo bootstrap ([`scripts/verificar-flujo.sh`](./scripts/verificar-flujo.sh)) |
 
-**Servicio con estado verificable:** PostgreSQL (`StatefulSet`, PVC 2 GiB) con 50 pedidos semilla y un CronJob que escribe una "marca" por minuto. La API REST (`servicio-datos`, PostgREST, desplegada como `Rollout`) expone los datos. La huella md5 de `pedidos` demuestra que se restauró el **contenido** y la última marca recuperada da el RPO exacto.
+**Servicio con estado verificable:** PostgreSQL (`StatefulSet` de 2 réplicas: primario `postgres-0` y réplica en espera `postgres-1`; PVC `data-postgres-0` de 2 GiB) con 50 pedidos semilla y un CronJob que escribe una "marca" por minuto. La API REST (`servicio-datos`, PostgREST, desplegada como `Rollout`) expone los datos. La huella md5 de `pedidos` demuestra que se restauró el **contenido** y la última marca recuperada da el RPO exacto.
 
 ```
 P9/

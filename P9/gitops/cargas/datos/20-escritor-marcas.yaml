@@ -28,7 +28,7 @@ spec:
               command:
                 - sh
                 - -c
-                - psql -h postgres -d p9 -v ON_ERROR_STOP=1 -c "INSERT INTO marcas (origen) VALUES ('cronjob');"
+                - psql -h postgres-primario -d p9 -v ON_ERROR_STOP=1 -c "INSERT INTO marcas (origen) VALUES ('cronjob');"
               env:
                 - name: PGUSER
                   valueFrom: { secretKeyRef: { name: db-credenciales, key: usuario } }

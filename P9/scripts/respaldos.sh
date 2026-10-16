@@ -7,6 +7,7 @@ source "$(dirname "$0")/lib.sh"
 credenciales_cluster
 if [[ "${1:-}" == "--ahora" ]]; then
   velero backup create --from-schedule velero-horario --wait
+  velero backup create --from-schedule velero-llave --wait
 fi
 echo "== Ubicacion de respaldos (fuera del cluster) =="; velero backup-location get
 echo; echo "== Schedule =="; velero schedule get

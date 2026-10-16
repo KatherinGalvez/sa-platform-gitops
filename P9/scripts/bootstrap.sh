@@ -4,7 +4,7 @@
 #
 #   ./P9/scripts/bootstrap.sh
 #
-# Reconstruye TODO el sistema desde cero, sin pasos manuales intermedios:
+# Reconstruye el sistema completo desde cero, sin intervencion humana intermedia:
 #   1. Terraform (capa persistente, idempotente)   -> bucket, SA, Secret Manager
 #   2. Terraform (capa cluster)                     -> GKE, llave Sealed Secrets, ArgoCD, app raiz
 #   3. ArgoCD app-of-apps (p9-raiz) por olas:
@@ -46,7 +46,8 @@ ULTIMO_REPORTE=0
 while :; do
   ESTADO=$(kubectl -n argocd get applications \
     -o jsonpath='{range .items[*]}{.metadata.name}{"="}{.status.sync.status}{"/"}{.status.health.status}{"\n"}{end}' 2>/dev/null || true)
-  PENDIENTES=$(echo "$ESTADO" | grep -v '=Synced/Healthy$' | grep . || true)
+  # Listo = todas Healthy y ninguna con sincronizacion Unknown (error de ArgoCD).
+  PENDIENTES=$(echo "$ESTADO" | grep -vE '=(Synced|OutOfSync)/Healthy$' | grep . || true)
   TOTAL=$(echo "$ESTADO" | grep -c . || true)
   if [[ -z "$PENDIENTES" && "$TOTAL" -ge 8 ]]; then break; fi
   if (( $(epoch) - ULTIMO_REPORTE >= 60 )); then
@@ -59,7 +60,7 @@ while :; do
   sleep 10
 done
 correr kubectl -n argocd get applications
-marca ARGOCD_TODO_SINCRONIZADO
+marca ARGOCD_SINCRONIZADO
 
 seccion "Registro de la restauracion automatica (ola 1)"
 kubectl -n velero logs job/restauracion-dr 2>&1 | tee -a "$LOG" || true

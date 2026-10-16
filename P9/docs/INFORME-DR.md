@@ -46,7 +46,7 @@ Reconstrucción: un solo comando, `scripts/bootstrap.sh`, sin intervención.
 
 | Punto | Qué revela la prueba | Impacto |
 |---|---|---|
-| PostgreSQL con 1 réplica | Drenar su nodo dejó la API sin respuesta `<<X>>` s (`--con-bd`) | Caída total del servicio con estado mientras el disco se reasigna |
+| PostgreSQL: un solo primario (la réplica es de solo lectura, sin failover automático) | Drenar el nodo del primario (`--con-bd`): la API siguió respondiendo lecturas desde la réplica, pero las escrituras del CronJob fallaron `<<X>>` s | Sin escrituras mientras el primario se reprograma |
 | Respaldos cada hora | Todo lo escrito después del último respaldo se pierde | RPO de hasta 60 min |
 | Llave de Sealed Secrets | Una sola copia en Secret Manager (versionada, `prevent_destroy`) | Si se borra, todos los SealedSecrets quedan ilegibles |
 | Clúster zonal, un solo proyecto y una sola cuenta | Una caída de la zona o la pérdida de acceso a la cuenta detienen todo | Ni el runbook puede ejecutarse |
