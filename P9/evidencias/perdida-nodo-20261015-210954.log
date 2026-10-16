@@ -1,0 +1,87 @@
+
+===== Antes del drenaje (nodo elegido: gke-p9-dr-principal-b20336d5-jd5g; nodo de la BD: gke-p9-dr-principal-b20336d5-9p24) =====
+[2026-10-15 21:09:58 CST] $ kubectl get nodes
+NAME                                STATUS   ROLES    AGE    VERSION
+gke-p9-dr-principal-b20336d5-9p24   Ready    <none>   149m   v1.36.4-gke.1391002
+gke-p9-dr-principal-b20336d5-cj8g   Ready    <none>   149m   v1.36.4-gke.1391002
+gke-p9-dr-principal-b20336d5-jd5g   Ready    <none>   149m   v1.36.4-gke.1391002
+[2026-10-15 21:09:58 CST] $ kubectl -n datos get pdb
+NAME             MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
+servicio-datos   2               N/A               1                     20m
+[2026-10-15 21:09:58 CST] $ kubectl -n datos get pods -o wide
+NAME                              READY   STATUS      RESTARTS   AGE   IP           NODE                                NOMINATED NODE   READINESS GATES
+escritor-marcas-29868650-fhcwb    0/1     Error       0          19m   10.20.1.18   gke-p9-dr-principal-b20336d5-jd5g   <none>           <none>
+escritor-marcas-29868669-vdbhg    0/1     Completed   0          59s   10.20.2.32   gke-p9-dr-principal-b20336d5-cj8g   <none>           <none>
+postgres-0                        1/1     Running     0          20m   10.20.0.17   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+postgres-1                        1/1     Running     0          19m   10.20.1.19   gke-p9-dr-principal-b20336d5-jd5g   <none>           <none>
+servicio-datos-674f75c96c-bpkcq   1/1     Running     0          20m   10.20.0.16   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+servicio-datos-674f75c96c-dt84q   1/1     Running     0          20m   10.20.1.17   gke-p9-dr-principal-b20336d5-jd5g   <none>           <none>
+servicio-datos-674f75c96c-xmdkg   1/1     Running     0          20m   10.20.2.13   gke-p9-dr-principal-b20336d5-cj8g   <none>           <none>
+
+===== Sonda HTTP cada 1 s =====
+[2026-10-15 21:10:09 CST] MARCA DRENAJE_INICIO epoch=1792120209
+[2026-10-15 21:10:09 CST] $ kubectl drain gke-p9-dr-principal-b20336d5-jd5g --ignore-daemonsets --delete-emptydir-data --timeout=600s
+node/gke-p9-dr-principal-b20336d5-jd5g cordoned
+Warning: ignoring DaemonSet-managed Pods: gmp-system/collector-jl97j, kube-system/filestore-node-h2j8l, kube-system/fluentbit-gke-xmr7g, kube-system/gke-metadata-server-jptm9, kube-system/gke-metrics-agent-tg68m, kube-system/netd-jzsgg, kube-system/node-local-dns-lkhdk, kube-system/pdcsi-node-9p6d4, velero/node-agent-h5sc6
+evicting pod velero/restauracion-dr-dqqfp
+evicting pod kube-system/filestore-lock-release-controller-7c996b4766-hbq6r
+evicting pod kube-system/kube-dns-autoscaler-7b97466c64-qsl49
+evicting pod kube-system/konnectivity-agent-c85f5db9-gf4tw
+evicting pod datos/escritor-marcas-29868650-fhcwb
+evicting pod kube-system/kube-dns-7b85fc9775-v6xrs
+evicting pod datos/postgres-1
+evicting pod kube-system/konnectivity-agent-autoscaler-6f79966478-bq8qq
+evicting pod kube-system/metrics-server-v1.36.0-6d89b4b6f8-42tt8
+evicting pod kube-system/l7-default-backend-585f468ff6-m4m66
+evicting pod datos/servicio-datos-674f75c96c-dt84q
+evicting pod kyverno/kyverno-admission-controller-c977bdd7-4rkfj
+evicting pod gmp-system/gmp-operator-75dd59487d-cnhvv
+evicting pod kube-system/event-exporter-gke-656dddcff4-jqdsb
+evicting pod gke-managed-cim/kube-state-metrics-0
+pod/escritor-marcas-29868650-fhcwb evicted
+pod/restauracion-dr-dqqfp evicted
+I1015 21:10:17.901791    4858 request.go:752] "Waited before sending request" delay="1.039572995s" reason="client-side throttling, not priority and fairness" verb="GET" URL="https://136.65.146.137/api/v1/namespaces/kube-system/pods/konnectivity-agent-c85f5db9-gf4tw"
+pod/kube-dns-autoscaler-7b97466c64-qsl49 evicted
+pod/postgres-1 evicted
+pod/servicio-datos-674f75c96c-dt84q evicted
+pod/l7-default-backend-585f468ff6-m4m66 evicted
+pod/gmp-operator-75dd59487d-cnhvv evicted
+pod/kube-state-metrics-0 evicted
+pod/kyverno-admission-controller-c977bdd7-4rkfj evicted
+pod/konnectivity-agent-autoscaler-6f79966478-bq8qq evicted
+pod/metrics-server-v1.36.0-6d89b4b6f8-42tt8 evicted
+pod/filestore-lock-release-controller-7c996b4766-hbq6r evicted
+pod/kube-dns-7b85fc9775-v6xrs evicted
+pod/konnectivity-agent-c85f5db9-gf4tw evicted
+pod/event-exporter-gke-656dddcff4-jqdsb evicted
+node/gke-p9-dr-principal-b20336d5-jd5g drained
+[2026-10-15 21:12:16 CST] MARCA DRENAJE_FIN epoch=1792120336
+[2026-10-15 21:12:16 CST] $ kubectl -n datos get pods -o wide
+NAME                              READY   STATUS      RESTARTS   AGE    IP           NODE                                NOMINATED NODE   READINESS GATES
+escritor-marcas-29868672-zvzx4    0/1     Completed   0          16s    10.20.0.28   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+postgres-0                        1/1     Running     0          22m    10.20.0.17   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+postgres-1                        1/1     Running     0          116s   10.20.2.41   gke-p9-dr-principal-b20336d5-cj8g   <none>           <none>
+servicio-datos-674f75c96c-bpkcq   1/1     Running     0          22m    10.20.0.16   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+servicio-datos-674f75c96c-kg979   1/1     Running     0          2m2s   10.20.0.23   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+servicio-datos-674f75c96c-xmdkg   1/1     Running     0          22m    10.20.2.13   gke-p9-dr-principal-b20336d5-cj8g   <none>           <none>
+[2026-10-15 21:12:16 CST] $ kubectl get nodes
+NAME                                STATUS                     ROLES    AGE    VERSION
+gke-p9-dr-principal-b20336d5-9p24   Ready                      <none>   151m   v1.36.4-gke.1391002
+gke-p9-dr-principal-b20336d5-cj8g   Ready                      <none>   151m   v1.36.4-gke.1391002
+gke-p9-dr-principal-b20336d5-jd5g   Ready,SchedulingDisabled   <none>   151m   v1.36.4-gke.1391002
+[2026-10-15 21:12:17 CST] Nodo acordonado; se mantiene 60 s fuera de servicio...
+[2026-10-15 21:13:17 CST] $ kubectl -n datos get pods -o wide
+NAME                              READY   STATUS      RESTARTS   AGE     IP           NODE                                NOMINATED NODE   READINESS GATES
+escritor-marcas-29868673-gwjmg    0/1     Completed   0          17s     10.20.0.29   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+postgres-0                        1/1     Running     0          23m     10.20.0.17   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+postgres-1                        1/1     Running     0          2m57s   10.20.2.41   gke-p9-dr-principal-b20336d5-cj8g   <none>           <none>
+servicio-datos-674f75c96c-bpkcq   1/1     Running     0          23m     10.20.0.16   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+servicio-datos-674f75c96c-kg979   1/1     Running     0          3m3s    10.20.0.23   gke-p9-dr-principal-b20336d5-9p24   <none>           <none>
+servicio-datos-674f75c96c-xmdkg   1/1     Running     0          23m     10.20.2.13   gke-p9-dr-principal-b20336d5-cj8g   <none>           <none>
+[2026-10-15 21:13:17 CST] $ kubectl uncordon gke-p9-dr-principal-b20336d5-jd5g
+node/gke-p9-dr-principal-b20336d5-jd5g uncordoned
+[2026-10-15 21:13:18 CST] MARCA NODO_REINCORPORADO epoch=1792120398
+
+===== Resultado de la sonda =====
+[2026-10-15 21:13:33 CST] Consultas: 149   OK: 149   FALLO: 0   Disponibilidad: 100.00 %
+[2026-10-15 21:13:33 CST] Detalle segundo a segundo: evidencias/sonda-20261015-210954.log

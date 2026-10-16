@@ -1,5 +1,5 @@
-# Ola 1: si existen respaldos en el bucket (cluster reconstruido), restaura el
-# namespace "datos" ANTES de que ArgoCD cree la base de datos vacia (ola 2).
+# Ola 1: permisos y script de la restauracion automatica. El Job se ejecuta
+# como hook PreSync de la app "datos" (ola 2), antes de crear la base de datos.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

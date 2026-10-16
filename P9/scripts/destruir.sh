@@ -20,9 +20,22 @@ marca DESTRUCCION_INICIO
 DISCOS=$(gcloud compute disks list --project "$PROYECTO" --filter="zone~$ZONA AND name~^pvc-" --format="value(name)" || true)
 log "Volumenes persistentes que se perderan: ${DISCOS:-ninguno}"
 
+# Leccion de la primera prueba de DR (15/10/2026): al borrar el node pool, GKE
+# vacia cada nodo RESPETANDO los PodDisruptionBudgets; como todos los nodos se
+# borran a la vez, los pods no tienen a donde ir y el PDB bloquea el desalojo
+# hasta 1 hora por nodo. Ademas el webhook de Kyverno queda registrado sin pods.
+# Se retiran esos bloqueos y se borra el CLUSTER directamente (sin vaciar nodos).
+if credenciales_cluster && kubectl get ns >/dev/null 2>&1; then
+  log "Retirando bloqueos de la destruccion (ArgoCD, PDB, webhooks de Kyverno)"
+  kubectl -n argocd scale statefulset argocd-application-controller --replicas=0 >/dev/null 2>&1 || true
+  kubectl delete pdb --all -A --wait=false 2>&1 | tee -a "$LOG" || true
+  kubectl delete validatingwebhookconfiguration,mutatingwebhookconfiguration \
+    -l webhook.kyverno.io/managed-by=kyverno --wait=false 2>&1 | tee -a "$LOG" || true
+fi
+
 tf_init cluster
 cd "$P9_DIR/terraform/cluster"
-for r in helm_release.raiz helm_release.argocd kubernetes_secret_v1.sealed_secrets_llave; do
+for r in google_container_node_pool.principal helm_release.raiz helm_release.argocd kubernetes_secret_v1.sealed_secrets_llave; do
   terraform state rm "$r" >/dev/null 2>&1 && log "estado: $r retirado (el cluster se pierde con el)" || true
 done
 correr terraform destroy -input=false -auto-approve "${TF_VARS_CLUSTER[@]}"

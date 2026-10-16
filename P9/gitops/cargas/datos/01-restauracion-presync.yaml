@@ -1,0 +1,37 @@
+# Hook PreSync de la app datos: restaura el namespace desde el ultimo respaldo
+# si el cluster es nuevo. El script y los permisos estan en plataforma/restauracion.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: restauracion-dr
+  namespace: velero
+  labels:
+    app: restauracion-dr
+  annotations:
+    # Se ejecuta ANTES de aplicar cualquier recurso de la app "datos" y ArgoCD
+    # espera a que termine. Garantiza: restaurar primero, crear despues.
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: restauracion-dr
+    spec:
+      serviceAccountName: restauracion-dr
+      restartPolicy: OnFailure
+      containers:
+        - name: restaurar
+          image: alpine/k8s:1.31.2
+          command: ["/bin/sh", "/scripts/restaurar.sh"]
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: restauracion-dr-script

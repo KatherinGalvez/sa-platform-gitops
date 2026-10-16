@@ -1,0 +1,438 @@
+
+===== 1. Estado inicial =====
+[2026-10-15 21:25:15 CST] Respaldo programado mas reciente: velero-horario-20261016030020 (inicio 2026-10-16T03:00:20Z)
+[2026-10-15 21:25:15 CST] $ velero backup describe velero-horario-20261016030020 --details
+Name:         [1mvelero-horario-20261016030020[22m
+Namespace:    velero
+Labels:       app.kubernetes.io/instance=velero
+              app.kubernetes.io/managed-by=Helm
+              app.kubernetes.io/name=velero
+              app.kubernetes.io/version=1.18.2
+              helm.sh/chart=velero-12.2.0
+              practica=p9
+              velero.io/schedule-name=velero-horario
+              velero.io/storage-location=default
+Annotations:  argocd.argoproj.io/tracking-id=velero:velero.io/Schedule:velero/velero-horario
+              velero.io/resource-timeout=10m0s
+              velero.io/source-cluster-k8s-gitversion=v1.36.4-gke.1391002
+              velero.io/source-cluster-k8s-major-version=1
+              velero.io/source-cluster-k8s-minor-version=36
+
+Phase:  [32mCompleted[0m
+
+
+Namespaces:
+  Included:  datos
+  Excluded:  <none>
+
+Resources:
+  Included cluster-scoped:    <none>
+  Excluded cluster-scoped:    volumesnapshotcontents.snapshot.storage.k8s.io
+  Included namespace-scoped:  *
+  Excluded namespace-scoped:  volumesnapshots.snapshot.storage.k8s.io
+
+Label selector:  <none>
+
+Or label selector:  <none>
+
+Storage Location:  default
+
+Velero-Native Snapshot PVs:    false
+File System Backup (Default):  true
+Snapshot Move Data:            false
+Data Mover:                    velero
+
+TTL:  168h0m0s
+
+CSISnapshotTimeout:    10m0s
+ItemOperationTimeout:  4h0m0s
+
+Hooks:  <none>
+
+Backup Format Version:  1.1.0
+
+Started:    2026-10-15 21:00:20 -0600 CST
+Completed:  2026-10-15 21:01:09 -0600 CST
+
+Expiration:  2026-10-22 21:00:20 -0600 CST
+
+Total items to be backed up:  228
+Items backed up:              228
+
+Resource List:
+  apiextensions.k8s.io/v1/CustomResourceDefinition:
+    - ephemeralreports.reports.kyverno.io
+    - rollouts.argoproj.io
+    - sealedsecrets.bitnami.com
+  apps/v1/ControllerRevision:
+    - datos/postgres-697fbb6c65
+  apps/v1/ReplicaSet:
+    - datos/servicio-datos-674f75c96c
+  apps/v1/StatefulSet:
+    - datos/postgres
+  argoproj.io/v1alpha1/Rollout:
+    - datos/servicio-datos
+  batch/v1/CronJob:
+    - datos/escritor-marcas
+  batch/v1/Job:
+    - datos/escritor-marcas-29868650
+    - datos/escritor-marcas-29868660
+  bitnami.com/v1alpha1/SealedSecret:
+    - datos/db-credenciales
+  discovery.k8s.io/v1/EndpointSlice:
+    - datos/postgres-8btwg
+    - datos/postgres-primario-xbbkt
+    - datos/servicio-datos-4rvz9
+  policy/v1/PodDisruptionBudget:
+    - datos/servicio-datos
+  reports.kyverno.io/v1/EphemeralReport:
+    - datos/1718a2a8-eab2-4855-8a45-ef23b9b92d8c-5mz7h
+    - datos/19d6fcd1-234d-4b96-b438-1f9adb08eb8f-blpwz
+    - datos/1a7c04ee-5b4f-4f2d-af57-a1d6fd58f279-qpljx
+    - datos/28a6f614-990b-403c-a9f2-96ccf38152e8-h4p94
+    - datos/3363f64e-7b40-49e2-927f-94215670b2e3-tkbjd
+    - datos/33a5a50c-114f-4775-82ac-cd891040e34b-x257n
+    - datos/40a293b0-59e7-46a8-892d-56cbfd59a03b-5lj9x
+    - datos/475ec0fd-4742-4ab2-986a-31abbc025794-j8vzj
+    - datos/5457b8f4-39b8-421d-8e30-a451c0849dc6-rl8rb
+    - datos/557f32ca-2c6d-4a41-a73f-d0253fba0ef5-mgwlj
+    - datos/57722c59-0e0c-4ecb-9dc0-e4595ada38b3-gffdp
+    - datos/5af53904-a3c3-420f-8b02-e25dd7b1be2e-72j7c
+    - datos/6a7d1c8d-e245-46d4-b8a3-47e21169be1d-6bsfm
+    - datos/74604e86-4627-42e7-9af7-00202a60e763-cf68r
+    - datos/779b3012-f64d-4a42-bb9b-5025faf8efbb-pzdxp
+    - datos/7ab9b3a5-e788-400a-a2ba-e4791450e145-kqdj5
+    - datos/84946007-e73d-4d23-93f2-5b5093a05ff7-plldw
+    - datos/898d3111-b9e0-45ee-bc03-b956b9ace18b-2lnfz
+    - datos/8acc4190-ee94-4aa4-a0b3-ea711acf039a-z6kdw
+    - datos/8d124f07-40dd-478b-9dd7-d4f47c59ac73-7c2ft
+    - datos/97d7e334-499b-4ff7-a2e0-1c07c94df9c6-2t5xp
+    - datos/9c1354ed-7bfc-4da8-a42a-325a7fe44995-g9swx
+    - datos/9e504143-f054-44c5-81a4-d734a5d950d6-hvrbm
+    - datos/a2a5cebd-e475-4d34-82a7-e9ca8730d127-b688p
+    - datos/aad6fb72-3a0d-4c94-b952-8d8d7047302d-ct9gj
+    - datos/ad3db84b-1df0-4d55-9017-5182e9a98b8c-jbclp
+    - datos/b4a20b6c-ccec-4ef2-889c-181e06967cea-sn545
+    - datos/b7ff2833-d435-45ce-b98a-92b19fc57f66-zn5jq
+    - datos/bba5a4b2-5fa7-487d-b00f-e8326e729f27-pzgcc
+    - datos/bd6540b8-2786-41c7-9227-62e09d3515d0-tm6gl
+    - datos/bf6a33c2-723e-4799-98f8-a693b61caba3-27ls9
+    - datos/c5ff1ec8-0a7b-43f9-9d61-03eb35372be0-msrsw
+    - datos/cbb898df-cd72-41de-a170-a60578a498f3-kq2xw
+    - datos/cef3affc-dc80-4da1-a993-9f8de549349b-lhnrj
+    - datos/d24a82d0-2884-47c3-acd8-ab084f090907-4cw6x
+    - datos/d36ad299-3251-4913-911a-4647e565d86c-dpcxx
+    - datos/ddcf4244-a424-419d-9f7e-02f49e12e4b4-5xm6h
+    - datos/e2350d62-ff4f-47c7-b079-1c8a0e434351-tzkll
+    - datos/f4cf9872-b3ab-49da-8d8f-239656bcb61c-fjcln
+    - datos/f7efea12-258b-46e6-9f45-11d45d3f830a-bzlzg
+  v1/ConfigMap:
+    - datos/kube-root-ca.crt
+    - datos/postgres-hba
+    - datos/postgres-init
+  v1/Endpoints:
+    - datos/postgres
+    - datos/postgres-primario
+    - datos/servicio-datos
+  v1/Event:
+    - datos/data-postgres-0.18dee2b90f8823c5
+    - datos/data-postgres-0.18dee2b93b8c66ac
+    - datos/data-postgres-0.18dee2b94108cffc
+    - datos/data-postgres-0.18dee2ba480bb58f
+    - datos/data-postgres-1.18dee2c4056c7db6
+    - datos/data-postgres-1.18dee2c4147ee1e1
+    - datos/data-postgres-1.18dee2c415290850
+    - datos/data-postgres-1.18dee2c46fc2e8f5
+    - datos/db-credenciales.18dee2b90ed395db
+    - datos/escritor-marcas-29868650-fhcwb.18dee2bca284a2d0
+    - datos/escritor-marcas-29868650-fhcwb.18dee2bccc2c456b
+    - datos/escritor-marcas-29868650-fhcwb.18dee2bf2bdf7171
+    - datos/escritor-marcas-29868650-fhcwb.18dee2bf2e2be61a
+    - datos/escritor-marcas-29868650-fhcwb.18dee2bf348eedac
+    - datos/escritor-marcas-29868650.18dee2bc9ff5bdf9
+    - datos/escritor-marcas-29868650.18dee2c0cfc1ad14
+    - datos/escritor-marcas-29868651-xrd5c.18dee2ca6e3d416e
+    - datos/escritor-marcas-29868651-xrd5c.18dee2ca9587c755
+    - datos/escritor-marcas-29868651-xrd5c.18dee2ccd196d1b2
+    - datos/escritor-marcas-29868651-xrd5c.18dee2ccd407367d
+    - datos/escritor-marcas-29868651-xrd5c.18dee2ccdaac347f
+    - datos/escritor-marcas-29868651.18dee2ca62e3b856
+    - datos/escritor-marcas-29868651.18dee2ce69dbe45e
+    - datos/escritor-marcas-29868652-nbncn.18dee2d86af67c73
+    - datos/escritor-marcas-29868652-nbncn.18dee2d88f1fbf00
+    - datos/escritor-marcas-29868652-nbncn.18dee2d89120b05e
+    - datos/escritor-marcas-29868652-nbncn.18dee2d8975ddd6e
+    - datos/escritor-marcas-29868652.18dee2d85f4eb4d8
+    - datos/escritor-marcas-29868652.18dee2d9603f4eee
+    - datos/escritor-marcas-29868653-cbn2f.18dee2e6605d986a
+    - datos/escritor-marcas-29868653-cbn2f.18dee2e68652d494
+    - datos/escritor-marcas-29868653-cbn2f.18dee2e689f3cedc
+    - datos/escritor-marcas-29868653-cbn2f.18dee2e6903764c9
+    - datos/escritor-marcas-29868653.18dee2e659190ca4
+    - datos/escritor-marcas-29868653.18dee2e71831c433
+    - datos/escritor-marcas-29868654-qhvsn.18dee2f468032ffd
+    - datos/escritor-marcas-29868654-qhvsn.18dee2f48de20900
+    - datos/escritor-marcas-29868654-qhvsn.18dee2f490deba2f
+    - datos/escritor-marcas-29868654-qhvsn.18dee2f497a98122
+    - datos/escritor-marcas-29868654.18dee2f45d3d19c3
+    - datos/escritor-marcas-29868654.18dee2f51bfa8be5
+    - datos/escritor-marcas-29868655-8sj85.18dee30252a487e5
+    - datos/escritor-marcas-29868655-8sj85.18dee3027d0df9cc
+    - datos/escritor-marcas-29868655-8sj85.18dee3027f87266a
+    - datos/escritor-marcas-29868655-8sj85.18dee302864f47c6
+    - datos/escritor-marcas-29868655.18dee3024fea29b8
+    - datos/escritor-marcas-29868655.18dee30356ceb5e9
+    - datos/escritor-marcas-29868656-fp889.18dee31061cb9cca
+    - datos/escritor-marcas-29868656-fp889.18dee3108a333d39
+    - datos/escritor-marcas-29868656-fp889.18dee3108e2677de
+    - datos/escritor-marcas-29868656-fp889.18dee31094c1463f
+    - datos/escritor-marcas-29868656.18dee3105cfb3c7e
+    - datos/escritor-marcas-29868656.18dee3111bd622b3
+    - datos/escritor-marcas-29868657-4fhh6.18dee31e434319d9
+    - datos/escritor-marcas-29868657-4fhh6.18dee31e702724c4
+    - datos/escritor-marcas-29868657-4fhh6.18dee31e73604260
+    - datos/escritor-marcas-29868657-4fhh6.18dee31e7a2feb0f
+    - datos/escritor-marcas-29868657.18dee31e40ce4258
+    - datos/escritor-marcas-29868657.18dee31f4de2f051
+    - datos/escritor-marcas-29868658-kkzff.18dee32c2970acc4
+    - datos/escritor-marcas-29868658-kkzff.18dee32c5f83c2ab
+    - datos/escritor-marcas-29868658-kkzff.18dee32c65b645b8
+    - datos/escritor-marcas-29868658-kkzff.18dee32c6e44e518
+    - datos/escritor-marcas-29868658.18dee32c2352a4ed
+    - datos/escritor-marcas-29868658.18dee32d23c00137
+    - datos/escritor-marcas-29868659-nhf68.18dee33a2bbad08a
+    - datos/escritor-marcas-29868659-nhf68.18dee33a5e6d0501
+    - datos/escritor-marcas-29868659-nhf68.18dee33a678f2dda
+    - datos/escritor-marcas-29868659-nhf68.18dee33a6e414e39
+    - datos/escritor-marcas-29868659.18dee33a280af478
+    - datos/escritor-marcas-29868659.18dee33b25170012
+    - datos/escritor-marcas-29868660-xwgj4.18dee34837ad0079
+    - datos/escritor-marcas-29868660-xwgj4.18dee34862ed72d9
+    - datos/escritor-marcas-29868660-xwgj4.18dee3486655aa51
+    - datos/escritor-marcas-29868660-xwgj4.18dee3486e5e584b
+    - datos/escritor-marcas-29868660.18dee348350ad376
+    - datos/escritor-marcas-29868660.18dee3492f0967af
+    - datos/escritor-marcas.18dee2bc985ab793
+    - datos/escritor-marcas.18dee2c0d005e9fc
+    - datos/escritor-marcas.18dee2ca46fbf509
+    - datos/escritor-marcas.18dee2ce6a17c578
+    - datos/escritor-marcas.18dee2d83eb1f864
+    - datos/escritor-marcas.18dee2d9629b5879
+    - datos/escritor-marcas.18dee2d9629bd817
+    - datos/escritor-marcas.18dee2e63734090d
+    - datos/escritor-marcas.18dee2e71b0484ae
+    - datos/escritor-marcas.18dee2e71b04ea52
+    - datos/escritor-marcas.18dee2f42f818ba2
+    - datos/escritor-marcas.18dee2f52021182e
+    - datos/escritor-marcas.18dee2f520219dd0
+    - datos/escritor-marcas.18dee3022812e520
+    - datos/escritor-marcas.18dee30359d68a29
+    - datos/escritor-marcas.18dee30359d7903b
+    - datos/escritor-marcas.18dee31020dec935
+    - datos/escritor-marcas.18dee3111f1dd1f2
+    - datos/escritor-marcas.18dee3111f20b53d
+    - datos/escritor-marcas.18dee31e18952d84
+    - datos/escritor-marcas.18dee31f50d1c0aa
+    - datos/escritor-marcas.18dee31f50d28d00
+    - datos/escritor-marcas.18dee349321caa1b
+    - datos/postgres-0.18dee2ba63fc27e9
+    - datos/postgres-0.18dee2be7a7ae25e
+    - datos/postgres-0.18dee2bf05f99cdf
+    - datos/postgres-0.18dee2c198caa889
+    - datos/postgres-0.18dee2c19b409a00
+    - datos/postgres-0.18dee2c1a33a0da6
+    - datos/postgres-0.18dee2c28fee887e
+    - datos/postgres-0.18dee2c2927035e1
+    - datos/postgres-0.18dee2c2998461ed
+    - datos/postgres-0.18dee3297cd1dcbc
+    - datos/postgres-1.18dee2c48aabfe4b
+    - datos/postgres-1.18dee2c61de9edb9
+    - datos/postgres-1.18dee2c715ff1ccf
+    - datos/postgres-1.18dee2c71945fee1
+    - datos/postgres-1.18dee2c71fc95eb6
+    - datos/postgres-1.18dee2c78fa67306
+    - datos/postgres-1.18dee2c7919e82eb
+    - datos/postgres-1.18dee2c798d2edbe
+    - datos/postgres.18dee2b90d1004ee
+    - datos/postgres.18dee2b915577e3e
+    - datos/postgres.18dee2c404e51f9c
+    - datos/postgres.18dee2c40bb67692
+    - datos/servicio-datos-674f75c96c-bpkcq.18dee2b967414c50
+    - datos/servicio-datos-674f75c96c-bpkcq.18dee2b98de462ff
+    - datos/servicio-datos-674f75c96c-bpkcq.18dee2b9e482801c
+    - datos/servicio-datos-674f75c96c-bpkcq.18dee2b9e6d1d3b1
+    - datos/servicio-datos-674f75c96c-bpkcq.18dee2b9ee549477
+    - datos/servicio-datos-674f75c96c-bpkcq.18dee2ba5ae38f7c
+    - datos/servicio-datos-674f75c96c-dt84q.18dee2b958b538ca
+    - datos/servicio-datos-674f75c96c-dt84q.18dee2b99b71e5d1
+    - datos/servicio-datos-674f75c96c-dt84q.18dee2ba19dc325f
+    - datos/servicio-datos-674f75c96c-dt84q.18dee2ba1bfdf092
+    - datos/servicio-datos-674f75c96c-dt84q.18dee2ba22991e2d
+    - datos/servicio-datos-674f75c96c-dt84q.18dee2bae6c7d305
+    - datos/servicio-datos-674f75c96c-xmdkg.18dee2b96749ae68
+    - datos/servicio-datos-674f75c96c-xmdkg.18dee2b990dc5e50
+    - datos/servicio-datos-674f75c96c-xmdkg.18dee2b9e3cc5acc
+    - datos/servicio-datos-674f75c96c-xmdkg.18dee2b9e725160b
+    - datos/servicio-datos-674f75c96c-xmdkg.18dee2b9ed1106b0
+    - datos/servicio-datos-674f75c96c-xmdkg.18dee2ba67792381
+    - datos/servicio-datos-674f75c96c.18dee2b954867986
+    - datos/servicio-datos-674f75c96c.18dee2b95dcd15ac
+    - datos/servicio-datos-674f75c96c.18dee2b960ce8fca
+    - datos/servicio-datos.18dee2b89851a38e
+    - datos/servicio-datos.18dee2b91e92a9e3
+    - datos/servicio-datos.18dee2b93fbfc993
+    - datos/servicio-datos.18dee2b93fc48c38
+    - datos/servicio-datos.18dee2b9472c48ab
+    - datos/servicio-datos.18dee2b94e5bdf3a
+    - datos/servicio-datos.18dee2b94e70996b
+  v1/Namespace:
+    - datos
+  v1/PersistentVolume:
+    - pvc-823474f6-7d4a-41b2-bde0-17469b2dee5f
+    - pvc-87859f71-b581-42ea-8f70-bcad0856649e
+  v1/PersistentVolumeClaim:
+    - datos/data-postgres-0
+    - datos/data-postgres-1
+  v1/Pod:
+    - datos/escritor-marcas-29868650-fhcwb
+    - datos/escritor-marcas-29868660-xwgj4
+    - datos/postgres-0
+    - datos/postgres-1
+    - datos/servicio-datos-674f75c96c-bpkcq
+    - datos/servicio-datos-674f75c96c-dt84q
+    - datos/servicio-datos-674f75c96c-xmdkg
+  v1/Secret:
+    - datos/db-credenciales
+  v1/Service:
+    - datos/postgres
+    - datos/postgres-primario
+    - datos/servicio-datos
+  v1/ServiceAccount:
+    - datos/default
+
+Backup Volumes:
+  Velero-Native Snapshots: <none included>
+
+  CSI Snapshots: <none included>
+
+  Pod Volume Backups - kopia:
+    Completed:
+      datos/postgres-0: data (size: 81722219, incremental size: 16833407), run (size: 70)
+      datos/postgres-1: data (size: 64808236, incremental size: 16833407), run (size: 70)
+
+HooksAttempted:  2
+HooksFailed:     0
+pedidos_filas=50 pedidos_md5=6cf10531da4fef22fce909b6f22cab44
+marcas_filas=36 marca_max_id=36 ultima_marca=2026-10-15 21:25:01
+
+===== 2. PERDIDA DE DATOS =====
+[2026-10-15 21:25:21 CST] MARCA PERDIDA_DATOS epoch=1792121121
+DELETE 50
+DELETE 36
+[2026-10-15 21:25:22 CST] Contenido despues del borrado:
+pedidos_filas=0 pedidos_md5=vacio
+marcas_filas=0 marca_max_id=0 ultima_marca=ninguna
+
+===== 3. Restauracion desde el respaldo (namespace datos-restaurado) =====
+[2026-10-15 21:25:24 CST] $ velero restore create prueba-datos-20261015-212512 --from-backup velero-horario-20261016030020 --include-namespaces datos --namespace-mappings datos:datos-restaurado --exclude-resources cronjobs.batch,jobs.batch,sealedsecrets.bitnami.com,events --wait
+Restore request "prueba-datos-20261015-212512" submitted successfully.
+Waiting for restore to complete. You may safely press ctrl-c to stop waiting - your restore will continue in the background.
+.............................................
+Restore completed with status: Completed. You may check for more information using the commands `velero restore describe prueba-datos-20261015-212512` and `velero restore logs prueba-datos-20261015-212512`.
+[2026-10-15 21:26:10 CST] $ velero restore describe prueba-datos-20261015-212512
+Name:         [1mprueba-datos-20261015-212512[22m
+Namespace:    velero
+Labels:       <none>
+Annotations:  <none>
+
+Phase:                       [32mCompleted[0m
+Total items to be restored:  69
+Items restored:              69
+
+Started:    2026-10-15 21:25:24 -0600 CST
+Completed:  2026-10-15 21:26:10 -0600 CST
+
+Warnings:
+  Velero:     <none>
+  Cluster:    <none>
+  Namespaces:
+    datos-restaurado:  could not restore, ConfigMap:kube-root-ca.crt already exists. Warning: the in-cluster version is different than the backed-up version
+
+Backup:  velero-horario-20261016030020
+
+Namespaces:
+  Included:  datos
+  Excluded:  <none>
+
+Resources:
+  Included:        *
+  Excluded:        cronjobs.batch, jobs.batch, sealedsecrets.bitnami.com, events, nodes, events.events.k8s.io, backups.velero.io, restores.velero.io, resticrepositories.velero.io, csinodes.storage.k8s.io, volumeattachments.storage.k8s.io, backuprepositories.velero.io
+  Cluster-scoped:  auto
+
+Namespace mappings:  datos=datos-restaurado
+
+Label selector:  <none>
+
+Or label selector:  <none>
+
+Restore PVs:  auto
+
+kopia Restores (specify --details for more information):
+  Completed:  4
+
+CSI Snapshot Restores: <none included>
+
+Existing Resource Policy:   <none>
+ItemOperationTimeout:       4h0m0s
+
+Preserve Service NodePorts:  auto
+
+Uploader config:
+
+
+HooksAttempted:   0
+HooksFailed:      0
+Waiting for 1 pods to be ready...
+partitioned roll out complete: 2 new pods have been updated...
+[2026-10-15 21:26:22 CST] MARCA RESTAURACION_LISTA epoch=1792121182
+[2026-10-15 21:26:22 CST] Contenido restaurado (verificacion del CONTENIDO, no solo del volumen):
+pedidos_filas=50 pedidos_md5=6cf10531da4fef22fce909b6f22cab44
+marcas_filas=11 marca_max_id=11 ultima_marca=2026-10-15 21:00:02
+[2026-10-15 21:26:24 CST] Muestra de filas restauradas:
+1|cliente-001|monitor|62.50
+2|cliente-002|mouse|100.00
+3|cliente-003|laptop|137.50
+4|cliente-004|audifonos|175.00
+5|cliente-005|teclado|212.50
+
+===== 4. Reparacion de produccion =====
+ set_config 
+------------
+ 
+(1 row)
+
+ setval 
+--------
+     11
+(1 row)
+
+ setval 
+--------
+     50
+(1 row)
+
+[2026-10-15 21:26:26 CST] MARCA PRODUCCION_REPARADA epoch=1792121186
+[2026-10-15 21:26:26 CST] Produccion despues de reparar:
+pedidos_filas=50 pedidos_md5=6cf10531da4fef22fce909b6f22cab44
+marcas_filas=12 marca_max_id=37 ultima_marca=2026-10-15 21:26:01
+
+===== 5. Calculo del RPO real =====
+| Medida | Valor |
+|---|---|
+| Respaldo usado | velero-horario-20261016030020 |
+| Momento de la perdida | 2026-10-15 21:25:21 CST |
+| Ultima marca recuperada | id 11, 2026-10-15 21:00:02 |
+| **RPO real** | **25m 19s (1519s)** |
+| Filas de marcas no recuperadas | 25 (escritas despues del respaldo) |
+| Tabla pedidos restaurada | IDENTICO al original (pedidos_md5=6cf10531da4fef22fce909b6f22cab44) |
+[2026-10-15 21:26:28 CST] Deje datos-restaurado para las capturas. Para borrarlo: kubectl delete ns datos-restaurado

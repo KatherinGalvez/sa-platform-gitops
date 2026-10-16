@@ -25,7 +25,7 @@ epoch()       { date +%s; }
 log()         { echo "[$(ahora)] $*" | tee -a "$LOG"; }
 marca()       { local e; e=$(epoch); echo "[$(ahora)] MARCA $1 epoch=$e" | tee -a "$LOG"; }
 seccion()     { echo | tee -a "$LOG"; echo "===== $* =====" | tee -a "$LOG"; }
-duracion()    { local s=$(( $2 - $1 )); printf '%dm %02ds (%ds)' $((s/60)) $((s%60)) "$s"; }
+duracion()    { [[ -z "${1:-}" || -z "${2:-}" ]] && { printf 'no medible'; return; }; local s=$(( $2 - $1 )); printf '%dm %02ds (%ds)' $((s/60)) $((s%60)) "$s"; }
 correr()      { log "\$ $*"; "$@" 2>&1 | tee -a "$LOG"; return "${PIPESTATUS[0]}"; }
 
 tf_init() {
@@ -55,7 +55,7 @@ huella_datos() {
   # Resumen verificable del CONTENIDO (no solo del volumen)
   local ns="${1:-datos}"
   psql_datos "$ns" "SELECT 'pedidos_filas=' || count(*) || ' pedidos_md5=' || coalesce(md5(string_agg(id||':'||cliente||':'||producto||':'||total, ',' ORDER BY id)),'vacio') FROM pedidos"
-  psql_datos "$ns" "SELECT 'marcas_filas=' || count(*) || ' marca_max_id=' || coalesce(max(id),0) || ' ultima_marca=' || coalesce(to_char(max(creado) AT TIME ZONE 'America/Guatemala','YYYY-MM-DD HH24:MI:SS'),'ninguna') FROM marcas"
+  psql_datos "$ns" "SELECT 'marcas_filas=' || count(*) || ' marca_max_id=' || coalesce(max(id),0) || ' primera_marca=' || coalesce(to_char(min(creado) AT TIME ZONE 'America/Guatemala','YYYY-MM-DD HH24:MI:SS'),'ninguna') || ' ultima_marca=' || coalesce(to_char(max(creado) AT TIME ZONE 'America/Guatemala','YYYY-MM-DD HH24:MI:SS'),'ninguna') FROM marcas"
 }
 
 servicio_responde() {

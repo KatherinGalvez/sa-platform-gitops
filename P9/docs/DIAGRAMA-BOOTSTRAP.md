@@ -29,7 +29,7 @@ flowchart TD
     W0C["Ola 0: argo-rollouts + kyverno<br/>entrega progresiva y admisión"]:::auto
     W1P["Ola 1: politicas<br/>ClusterPolicies en modo Enforce"]:::auto
     W0B["Ola 0: velero + node-agent<br/>sincroniza respaldos del bucket"]:::auto
-    W1["Ola 1: Job restauracion-dr<br/>restaura ns datos del último respaldo"]:::auto
+    W1["Ola 2 · hook PreSync de datos:<br/>Job restauracion-dr restaura ns datos<br/>del último respaldo válido"]:::auto
     W2["Ola 2: datos<br/>PostgreSQL + API (Rollout canary) + PDB + CronJob"]:::auto
     V["Verificación: apps Healthy,<br/>secretos, huella de datos, HTTP 200<br/>MARCA SERVICIO_RESPONDE"]:::auto
 
@@ -60,6 +60,6 @@ flowchart TD
 |---|---|
 | Llave (4) antes de ArgoCD (5) | Si el controlador de Sealed Secrets arranca sin llave, genera una nueva y los secretos del repositorio quedan ilegibles. |
 | Velero (ola 0) antes de restauración (ola 1) | La restauración necesita los CRDs de Velero y la sincronización de respaldos desde el bucket. |
-| Restauración (ola 1) antes de datos (ola 2) | Velero no sobrescribe un PVC existente: si ArgoCD creara primero la base de datos vacía, la restauración se omitiría. |
+| Restauración (hook PreSync) antes de los recursos de datos | Velero no sobrescribe un PVC existente: si ArgoCD creara primero la base de datos vacía, la restauración se omitiría. En la primera prueba de DR el Job estaba en una ola anterior y **aun así** ArgoCD creó la BD vacía antes de que el Job revisara (la salud de un Job recién creado no bloquea la ola). Por eso el Job pasó a ser un hook **PreSync** de la propia app `datos`: ArgoCD no aplica nada de esa app hasta que el hook termina. |
 | Kyverno (ola 0) y políticas (ola 1) antes de datos (ola 2) | Los pods de la aplicación se admiten ya con las políticas activas; Argo Rollouts debe existir para crear el `Rollout`. |
 | Salud de `Application` personalizada en ArgoCD | Sin ella las olas no esperan a que la ola anterior esté *Healthy*. |

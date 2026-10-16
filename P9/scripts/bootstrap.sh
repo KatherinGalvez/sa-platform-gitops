@@ -9,8 +9,9 @@
 #   2. Terraform (capa cluster)                     -> GKE, llave Sealed Secrets, ArgoCD, app raiz
 #   3. ArgoCD app-of-apps (p9-raiz) por olas:
 #        ola 0 sealed-secrets, velero, argo-rollouts, kyverno
-#        ola 1 politicas (Kyverno) + restauracion-dr (restaura datos si hay respaldo)
-#        ola 2 datos  (PostgreSQL + API como Rollout canary + PDB)
+#        ola 1 politicas (Kyverno) + restauracion-dr (permisos y script)
+#        ola 2 datos: hook PreSync restaura desde el ultimo respaldo y LUEGO
+#             se aplican PostgreSQL + API (Rollout canary) + PDB
 #   4. Verificaciones: aplicaciones Synced/Healthy, secretos descifrados,
 #      contenido de la base de datos y API respondiendo.
 # Cada fase deja una MARCA con fecha/hora en evidencias/ para calcular el RTO.
@@ -62,7 +63,7 @@ done
 correr kubectl -n argocd get applications
 marca ARGOCD_SINCRONIZADO
 
-seccion "Registro de la restauracion automatica (ola 1)"
+seccion "Registro de la restauracion automatica (hook PreSync de datos)"
 kubectl -n velero logs job/restauracion-dr 2>&1 | tee -a "$LOG" || true
 kubectl -n velero get restores 2>/dev/null | tee -a "$LOG" || true
 

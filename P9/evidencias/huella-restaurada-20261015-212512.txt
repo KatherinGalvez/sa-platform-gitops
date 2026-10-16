@@ -1,0 +1,2 @@
+pedidos_filas=50 pedidos_md5=6cf10531da4fef22fce909b6f22cab44
+marcas_filas=11 marca_max_id=11 ultima_marca=2026-10-15 21:00:02

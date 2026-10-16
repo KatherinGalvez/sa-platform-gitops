@@ -1,5 +1,9 @@
 # Restauracion automatica en el bootstrap de dia cero.
-# Se ejecuta UNA vez por cluster (ola 1 del app-of-apps):
+# Aqui viven los permisos y el script; el Job que lo ejecuta es un hook
+# PreSync de la aplicacion "datos" (cargas/datos/01-restauracion-presync.yaml),
+# asi ArgoCD NO puede crear la base de datos vacia antes de que termine.
+# Se usa solo el respaldo mas reciente Completed, sin errores ni advertencias
+# (descarta respaldos tomados mientras el cluster se estaba destruyendo):
 #   - Sin respaldos en el bucket  -> arranque en limpio (primer despliegue).
 #   - Con respaldos               -> restaura "datos" desde el ultimo respaldo
 #     COMPLETADO anterior a la creacion de este cluster.
@@ -109,8 +113,8 @@ data:
     i=0
     while [ -z "$ULTIMO" ] && [ $i -lt 24 ]; do
       ULTIMO=$(kubectl -n velero get backups -l velero.io/schedule-name=$SCHEDULE \
-        -o jsonpath='{range .items[*]}{.status.phase}{" "}{.status.startTimestamp}{" "}{.metadata.name}{"\n"}{end}' 2>/dev/null \
-        | awk -v lim="$CREACION" '$1=="Completed" && $2<lim {print $2" "$3}' | sort | tail -1 | awk '{print $2}')
+        -o jsonpath='{range .items[*]}{.status.phase}{" "}{.status.startTimestamp}{" "}{.metadata.name}{" "}{.status.warnings}{.status.errors}{"\n"}{end}' 2>/dev/null \
+        | awk -v lim="$CREACION" '$1=="Completed" && $2<lim && NF==3 {print $2" "$3}' | sort | tail -1 | awk '{print $2}')
       [ -z "$ULTIMO" ] && { i=$((i+1)); sleep 5; }
     done
 
@@ -151,34 +155,3 @@ data:
     kubectl -n velero get restore "$NOMBRE" -o jsonpath='{"advertencias="}{.status.warnings}{" errores="}{.status.errors}{"\n"}'
     log "Fin"
     exit 0
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: restauracion-dr
-  namespace: velero
-  labels:
-    app: restauracion-dr
-spec:
-  backoffLimit: 2
-  template:
-    metadata:
-      labels:
-        app: restauracion-dr
-    spec:
-      serviceAccountName: restauracion-dr
-      restartPolicy: OnFailure
-      containers:
-        - name: restaurar
-          image: alpine/k8s:1.31.2
-          command: ["/bin/sh", "/scripts/restaurar.sh"]
-          resources:
-            requests: { cpu: 50m, memory: 64Mi }
-            limits: { memory: 256Mi }
-          volumeMounts:
-            - name: script
-              mountPath: /scripts
-      volumes:
-        - name: script
-          configMap:
-            name: restauracion-dr-script

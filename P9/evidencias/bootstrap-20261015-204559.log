@@ -1,0 +1,112 @@
+
+===== BOOTSTRAP P9  proyecto=sa-p6-202006633 cluster=p9-dr zona=us-central1-a =====
+[2026-10-15 20:45:59 CST] MARCA BOOTSTRAP_INICIO epoch=1792118759
+
+===== 1/4 Terraform: capa persistente =====
+[2026-10-15 20:46:06 CST] $ terraform -chdir=/home/g3057796210301/sa-platform-gitops/P9/terraform/persistente apply -input=false -auto-approve -var=project_id=sa-p6-202006633 -var=region=us-central1 -var=velero_bucket=sa-p6-202006633-p9-velero
+[0m[1mgoogle_secret_manager_secret.sealed_crt: Refreshing state... [id=projects/sa-p6-202006633/secrets/p9-sealed-secrets-crt][0m
+[0m[1mgoogle_secret_manager_secret.sealed_key: Refreshing state... [id=projects/sa-p6-202006633/secrets/p9-sealed-secrets-key][0m
+[0m[1mgoogle_service_account.velero: Refreshing state... [id=projects/sa-p6-202006633/serviceAccounts/velero-p9@sa-p6-202006633.iam.gserviceaccount.com][0m
+[0m[1mgoogle_storage_bucket.velero: Refreshing state... [id=sa-p6-202006633-p9-velero][0m
+[0m[1mgoogle_service_account_iam_member.velero_firma: Refreshing state... [id=projects/sa-p6-202006633/serviceAccounts/velero-p9@sa-p6-202006633.iam.gserviceaccount.com/roles/iam.serviceAccountTokenCreator/serviceAccount:velero-p9@sa-p6-202006633.iam.gserviceaccount.com][0m
+[0m[1mgoogle_storage_bucket_iam_member.velero_objetos: Refreshing state... [id=b/sa-p6-202006633-p9-velero/roles/storage.objectAdmin/serviceAccount:velero-p9@sa-p6-202006633.iam.gserviceaccount.com][0m
+[0m[1mgoogle_storage_bucket_iam_member.velero_lectura_bucket: Refreshing state... [id=b/sa-p6-202006633-p9-velero/roles/storage.legacyBucketReader/serviceAccount:velero-p9@sa-p6-202006633.iam.gserviceaccount.com][0m
+
+[0m[1m[32mNo changes.[0m[1m Your infrastructure matches the configuration.[0m
+
+[0mTerraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
+[0m[1m[32m
+Apply complete! Resources: 0 added, 0 changed, 0 destroyed.[0m
+[0m[1m[32m
+Outputs:
+
+[0msealed_crt_secret = "p9-sealed-secrets-crt"
+sealed_key_secret = "p9-sealed-secrets-key"
+velero_bucket = "sa-p6-202006633-p9-velero"
+velero_gsa_email = "velero-p9@sa-p6-202006633.iam.gserviceaccount.com"
+[2026-10-15 20:46:14 CST] MARCA PERSISTENTE_OK epoch=1792118774
+
+===== 2/4 Terraform: cluster + ArgoCD + app raiz =====
+[2026-10-15 20:46:22 CST] $ terraform -chdir=/home/g3057796210301/sa-platform-gitops/P9/terraform/cluster apply -input=false -auto-approve -var=project_id=sa-p6-202006633 -var=region=us-central1 -var=zona=us-central1-a -var=estado_bucket=sa-p6-202006633-p9-tfstate -var=cluster_name=p9-dr -var=tipo_maquina=e2-standard-2 -var=nodos=3 -var=repo_url=https://github.com/KatherinGalvez/sa-platform-gitops.git -var=repo_rama=main -var=gitops_ruta=P9/gitops
+[0m[1mdata.terraform_remote_state.persistente: Reading...[0m[0m
+[0m[1mdata.google_client_config.actual: Reading...[0m[0m
+[0m[1mdata.google_client_config.actual: Read complete after 0s [id=projects/sa-p6-202006633/regions/us-central1/zones/][0m
+[0m[1mdata.terraform_remote_state.persistente: Read complete after 0s[0m
+[0m[1mdata.google_secret_manager_secret_version.sealed_crt: Reading...[0m[0m
+[0m[1mdata.google_secret_manager_secret_version.sealed_key: Reading...[0m[0m
+[0m[1mgoogle_container_cluster.p9: Refreshing state... [id=projects/sa-p6-202006633/locations/us-central1-a/clusters/p9-dr][0m
+[0m[1mdata.google_secret_manager_secret_version.sealed_crt: Read complete after 1s [id=projects/755583979529/secrets/p9-sealed-secrets-crt/versions/1][0m
+[0m[1mdata.google_secret_manager_secret_version.sealed_key: Read complete after 1s [id=projects/755583979529/secrets/p9-sealed-secrets-key/versions/1][0m
+[0m[1mgoogle_service_account_iam_member.velero_wi: Refreshing state... [id=projects/sa-p6-202006633/serviceAccounts/velero-p9@sa-p6-202006633.iam.gserviceaccount.com/roles/iam.workloadIdentityUser/serviceAccount:sa-p6-202006633.svc.id.goog[velero/velero-server]][0m
+[0m[1mgoogle_container_node_pool.principal: Refreshing state... [id=projects/sa-p6-202006633/locations/us-central1-a/clusters/p9-dr/nodePools/principal][0m
+[0m[1mkubernetes_secret_v1.sealed_secrets_llave: Refreshing state... [id=kube-system/sealed-secrets-key-p9][0m
+[0m[1mhelm_release.argocd: Refreshing state... [id=argocd][0m
+[0m[1mhelm_release.raiz: Refreshing state... [id=p9-raiz][0m
+
+[0m[1m[32mNo changes.[0m[1m Your infrastructure matches the configuration.[0m
+
+[0mTerraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.
+[0m[1m[32m
+Apply complete! Resources: 0 added, 0 changed, 0 destroyed.[0m
+[0m[1m[32m
+Outputs:
+
+[0mapp_raiz = "p9-raiz (namespace argocd)"
+cluster = "p9-dr"
+zona = "us-central1-a"
+[2026-10-15 20:46:33 CST] MARCA TERRAFORM_OK epoch=1792118793
+[2026-10-15 20:46:34 CST] $ kubectl get nodes -o wide
+NAME                                STATUS   ROLES    AGE    VERSION               INTERNAL-IP   EXTERNAL-IP       OS-IMAGE                             KERNEL-VERSION      CONTAINER-RUNTIME
+gke-p9-dr-principal-b20336d5-9p24   Ready    <none>   126m   v1.36.4-gke.1391002   10.128.0.12   136.119.205.187   Container-Optimized OS from Google   6.12.105+ (amd64)   containerd://2.2.7
+gke-p9-dr-principal-b20336d5-cj8g   Ready    <none>   125m   v1.36.4-gke.1391002   10.128.0.14   34.171.50.133     Container-Optimized OS from Google   6.12.105+ (amd64)   containerd://2.2.7
+gke-p9-dr-principal-b20336d5-jd5g   Ready    <none>   126m   v1.36.4-gke.1391002   10.128.0.13   34.122.202.167    Container-Optimized OS from Google   6.12.105+ (amd64)   containerd://2.2.7
+
+===== 3/4 ArgoCD app-of-apps =====
+[2026-10-15 20:46:37 CST] Esperando aplicaciones: datos=OutOfSync/Missing sealed-secrets=Unknown/Healthy 
+[2026-10-15 20:47:40 CST] Esperando aplicaciones: datos=OutOfSync/Missing sealed-secrets=Unknown/Healthy 
+[2026-10-15 20:48:44 CST] Esperando aplicaciones: datos=OutOfSync/Missing sealed-secrets=Unknown/Healthy 
+[2026-10-15 20:49:47 CST] Esperando aplicaciones: datos=Synced/Progressing p9-raiz=Synced/Progressing 
+[2026-10-15 20:50:51 CST] Esperando aplicaciones: datos=Synced/Progressing p9-raiz=Synced/Progressing 
+[2026-10-15 20:51:01 CST] $ kubectl -n argocd get applications
+NAME              SYNC STATUS   HEALTH STATUS
+argo-rollouts     Synced        Healthy
+datos             Synced        Healthy
+kyverno           OutOfSync     Healthy
+p9-raiz           Synced        Healthy
+politicas         Synced        Healthy
+restauracion-dr   Synced        Healthy
+sealed-secrets    Synced        Healthy
+velero            Synced        Healthy
+[2026-10-15 20:51:02 CST] MARCA ARGOCD_SINCRONIZADO epoch=1792119062
+
+===== Registro de la restauracion automatica (ola 1) =====
+2026-10-16T00:45:20Z [restauracion-dr] Inicio
+2026-10-16T00:45:20Z [restauracion-dr] Esperando a Velero...
+2026-10-16T00:45:20Z [restauracion-dr] Esperando que la ubicacion de respaldos este Available...
+2026-10-16T00:45:21Z [restauracion-dr] BSL Available
+2026-10-16T00:45:21Z [restauracion-dr] Cluster creado en 2026-10-16T00:35:10Z
+2026-10-16T00:47:24Z [restauracion-dr] No hay respaldos previos del schedule velero-horario: arranque en limpio.
+
+===== 4/4 Verificaciones =====
+partitioned roll out complete: 2 new pods have been updated...
+rollout.argoproj.io/servicio-datos condition met
+[2026-10-15 20:51:05 CST] Secretos: SealedSecret -> Secret
+NAME                                       STATUS   SYNCED   AGE
+sealedsecret.bitnami.com/db-credenciales            True     79s
+
+NAME                     TYPE     DATA   AGE
+secret/db-credenciales   Opaque   2      79s
+[2026-10-15 20:51:05 CST] Contenido de la base de datos:
+pedidos_filas=50 pedidos_md5=6cf10531da4fef22fce909b6f22cab44
+marcas_filas=1 marca_max_id=1 ultima_marca=2026-10-15 20:50:28
+[2026-10-15 20:51:07 CST] Esperando respuesta HTTP de la API...
+[{"id":1,"cliente":"cliente-001","total":62.50}, 
+ {"id":2,"cliente":"cliente-002","total":100.00}, 
+ {"id":3,"cliente":"cliente-003","total":137.50}]
+[2026-10-15 20:51:08 CST] MARCA SERVICIO_RESPONDE epoch=1792119068
+
+===== RESUMEN =====
+[2026-10-15 20:51:08 CST] Duracion total del bootstrap: 5m 09s (309s)
+[2026-10-15 20:51:08 CST] Registro completo: evidencias/bootstrap-20261015-204559.log

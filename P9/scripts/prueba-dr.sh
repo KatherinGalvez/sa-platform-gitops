@@ -42,7 +42,10 @@ seccion "VERIFICACION DE DATOS RESTAURADOS"
 huella_datos datos | tee -a "$LOG" | tee "$EVIDENCIAS/huella-despues-$SELLO.txt"
 FILA=$(psql_datos datos "SELECT id || '|' || extract(epoch from creado)::bigint || '|' || to_char(creado AT TIME ZONE 'America/Guatemala','YYYY-MM-DD HH24:MI:SS') FROM marcas WHERE creado < '$T0_UTC' ORDER BY id DESC LIMIT 1")
 ID_REC=${FILA%%|*}; RESTO=${FILA#*|}; EP_REC=${RESTO%%|*}; ISO_REC=${RESTO#*|}
-PERDIDAS=$(( MAX_ID_ANTES - ID_REC ))
+if [[ -z "$FILA" ]]; then
+  log "ATENCION: no se recupero ninguna marca anterior al incidente: los datos NO se restauraron."
+  ID_REC=0; EP_REC=""; ISO_REC="ninguna"
+fi
 PED_ANTES=$(grep -o 'pedidos_md5=[a-z0-9]*' "$EVIDENCIAS/huella-antes-$SELLO.txt")
 PED_DESP=$(grep -o 'pedidos_md5=[a-z0-9]*' "$EVIDENCIAS/huella-despues-$SELLO.txt")
 [[ "$PED_ANTES" == "$PED_DESP" ]] && PED_OK="IDENTICO (contenido verificado)" || PED_OK="DIFERENTE"
@@ -70,7 +73,7 @@ cat > "$RESUMEN" <<EOF
 | Respaldo usado | ${ULTIMO_RESPALDO#* } (iniciado ${ULTIMO_RESPALDO%% *}) |
 | Ultima marca recuperada | id $ID_REC, $ISO_REC |
 | **RPO real (T0 - ultima marca recuperada)** | **$RPO** |
-| Marcas perdidas (escritas despues del respaldo) | $PERDIDAS filas (id $((ID_REC+1)) a $MAX_ID_ANTES) |
+| Marcas perdidas | todas las escritas despues de $ISO_REC y antes de T0 (aprox. una por minuto: ver RPO) |
 | Tabla pedidos antes vs despues | $PED_OK |
 
 Registro completo: \`evidencias/$(basename "$LOG")\`
