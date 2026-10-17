@@ -1,0 +1,4 @@
+p10.env
+__pycache__/
+*.pyc
+verificacion/resultados_p10.csv

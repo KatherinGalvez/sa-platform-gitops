@@ -1,0 +1,94 @@
+# pedidos: Rollout canary GOBERNADO POR METRICAS.
+#
+#   25% del trafico (1 de 4 pods) -> espera 60s para tener datos ->
+#   AnalysisTemplate "pedidos-canary-salud" consulta Prometheus SOLO sobre los
+#   pods del canary (rollouts_pod_template_hash = hash de la nueva version):
+#     * tasa de errores 5xx  < 5 %
+#     * latencia p95         < 500 ms
+#   Se repite el analisis con 50 % del trafico y, si aprueba, se promueve al 100 %.
+#   Si una medicion falla 2 veces -> el Rollout se ABORTA y vuelve solo a la
+#   version estable (reversion automatica, sin intervencion humana).
+#
+# Fallo inducido para la demostracion (scripts/demo-canary.sh): la version
+# v2 agrega latencia (LATENCIA_EXTRA_MS) -> el p95 del canary supera 500 ms.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: pedidos
+  namespace: produccion
+  labels:
+    app: pedidos
+    app.kubernetes.io/part-of: tienda-p10
+spec:
+  replicas: 4
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: { app: pedidos }
+  strategy:
+    canary:
+      steps:
+        - setWeight: 25
+        - pause: { duration: 60s }
+        - analysis:
+            templates:
+              - templateName: pedidos-canary-salud
+            args:
+              - name: canary-hash
+                valueFrom:
+                  podTemplateHashValue: Latest
+        - setWeight: 50
+        - pause: { duration: 30s }
+        # Segunda compuerta con la mitad del trafico; al aprobarla se promueve al 100 %
+        - analysis:
+            templates:
+              - templateName: pedidos-canary-salud
+            args:
+              - name: canary-hash
+                valueFrom:
+                  podTemplateHashValue: Latest
+  template:
+    metadata:
+      labels:
+        app: pedidos
+        app.kubernetes.io/part-of: tienda-p10
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: pedidos
+          image: us-central1-docker.pkg.dev/sa-p6-202006633/p10/tienda:1.0.0
+          command: ["python", "pedidos.py"]
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - { name: OTEL_SERVICE_NAME, value: pedidos }
+            - { name: VERSION, value: "v1" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.observabilidad.svc:4317" }
+            - { name: INVENTARIO_URL, value: "http://inventario:8080" }
+            - { name: PAGOS_URL, value: "http://pagos:8080" }
+            # Fallo inducido (0 = sano). Ver docs/INFORME-OPERACION.md
+            - { name: FALLA_PORCENTAJE, value: "0" }
+            - { name: LATENCIA_EXTRA_MS, value: "0" }
+          readinessProbe:
+            httpGet: { path: /salud, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /salud, port: http }
+            initialDelaySeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pedidos
+  namespace: produccion
+  labels: { app: pedidos }
+spec:
+  selector: { app: pedidos }
+  ports:
+    - { name: http, port: 8080, targetPort: http }

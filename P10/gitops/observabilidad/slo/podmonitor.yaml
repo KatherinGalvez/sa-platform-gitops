@@ -1,0 +1,23 @@
+# Prometheus recolecta /metrics de todos los pods de la tienda cada 10 s.
+# La etiqueta del pod rollouts-pod-template-hash se copia a cada serie para que
+# el AnalysisTemplate pueda separar el canary de la version estable.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: tienda-p10
+  namespace: observabilidad
+spec:
+  namespaceSelector:
+    matchNames: [produccion]
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: tienda-p10
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 10s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_label_rollouts_pod_template_hash]
+          targetLabel: rollouts_pod_template_hash
+        - sourceLabels: [__meta_kubernetes_pod_label_app]
+          targetLabel: app

@@ -1,0 +1,16 @@
+# Ola -1: registro OCI de los charts de prometheus-community (ghcr.io).
+# No contiene credenciales: es un registro publico, solo se declara como OCI.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-prometheus-community-oci
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+stringData:
+  type: helm
+  name: prometheus-community-oci
+  url: ghcr.io/prometheus-community/charts
+  enableOCI: "true"

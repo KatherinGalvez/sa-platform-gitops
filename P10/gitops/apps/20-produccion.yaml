@@ -1,0 +1,24 @@
+# Ola 2: la aplicacion (pedidos, pagos, inventario + generador de trafico).
+# pedidos es un Rollout canary gobernado por metricas de Prometheus.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: produccion
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/KatherinGalvez/sa-platform-gitops.git
+    targetRevision: main
+    path: P10/gitops/produccion
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: produccion
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]
+    retry:
+      limit: 10
+      backoff: { duration: 10s, factor: 2, maxDuration: 2m }

@@ -1,0 +1,42 @@
+# Analisis del canary contra Prometheus.
+# Las dos consultas filtran por rollouts_pod_template_hash = {{args.canary-hash}}:
+# miden SOLO el trafico atendido por los pods de la version nueva, no el total.
+# (El PodMonitor copia la etiqueta del pod rollouts-pod-template-hash a la serie.)
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: pedidos-canary-salud
+  namespace: produccion
+spec:
+  args:
+    - name: canary-hash
+  metrics:
+    - name: tasa-errores-canary
+      interval: 20s
+      count: 5
+      failureLimit: 1
+      # Sin trafico la division da vacio -> "or vector(0)" evita un falso error.
+      successCondition: result[0] < 0.05
+      provider:
+        prometheus:
+          address: http://prometheus-operated.observabilidad.svc:9090
+          query: |
+            (
+              (sum(rate(http_server_requests_seconds_count{namespace="produccion",service="pedidos",route="/pedidos",status=~"5..",rollouts_pod_template_hash="{{args.canary-hash}}"}[1m])) or vector(0))
+              /
+              clamp_min(sum(rate(http_server_requests_seconds_count{namespace="produccion",service="pedidos",route="/pedidos",rollouts_pod_template_hash="{{args.canary-hash}}"}[1m])), 0.001)
+            ) or vector(0)
+    - name: latencia-p95-canary
+      interval: 20s
+      count: 5
+      failureLimit: 1
+      successCondition: result[0] < 0.5
+      provider:
+        prometheus:
+          address: http://prometheus-operated.observabilidad.svc:9090
+          query: |
+            (
+              histogram_quantile(0.95,
+                sum by (le) (rate(http_server_requests_seconds_bucket{namespace="produccion",service="pedidos",route="/pedidos",rollouts_pod_template_hash="{{args.canary-hash}}"}[1m]))
+              ) >= 0
+            ) or vector(0)

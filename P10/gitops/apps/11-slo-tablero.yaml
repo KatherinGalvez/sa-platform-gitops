@@ -1,0 +1,25 @@
+# Ola 1: que se mide y que se alerta.
+#   PodMonitor (recoleccion), PrometheusRule (SLI/SLO + alertas por consumo del
+#   presupuesto de error, con runbook) y el tablero de Grafana (cuatro senales de oro).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: slo-tablero
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/KatherinGalvez/sa-platform-gitops.git
+    targetRevision: main
+    path: P10/gitops/observabilidad/slo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observabilidad
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]
+    retry:
+      limit: 10
+      backoff: { duration: 10s, factor: 2, maxDuration: 2m }

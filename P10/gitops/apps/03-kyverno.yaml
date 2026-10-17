@@ -1,0 +1,45 @@
+# Ola 0: motor de politicas de admision (flujo de la Practica 8).
+# Politicas de admision de la Practica 8 conservadas en el entorno de P10.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://kyverno.github.io/kyverno/
+    chart: kyverno
+    targetRevision: 3.9.1
+    helm:
+      releaseName: kyverno
+      valuesObject:
+        admissionController:
+          replicas: 1
+          container:
+            resources:
+              requests: { cpu: 50m, memory: 128Mi }
+              limits: { memory: 384Mi }
+        backgroundController:
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 256Mi }
+        cleanupController:
+          enabled: false
+        reportsController:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  # Kyverno inyecta el caBundle de su webhook de conversion en sus propios
+  # CRDs: esa diferencia es esperada y no debe marcar la app como OutOfSync.
+  ignoreDifferences:
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jqPathExpressions:
+        - .spec.conversion
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true, RespectIgnoreDifferences=true]

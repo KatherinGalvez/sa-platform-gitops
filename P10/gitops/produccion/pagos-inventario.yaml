@@ -1,0 +1,114 @@
+# pagos e inventario: servicios internos llamados por pedidos.
+# pagos admite un fallo inducido (FALLA_PORCENTAJE) que simula la caida de la
+# pasarela de pago; se usa en scripts/demo-alerta.sh para disparar la alerta
+# de consumo del presupuesto de error y recorrer alerta -> traza -> registro.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pagos
+  namespace: produccion
+  labels:
+    app: pagos
+    app.kubernetes.io/part-of: tienda-p10
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: pagos }
+  template:
+    metadata:
+      labels:
+        app: pagos
+        app.kubernetes.io/part-of: tienda-p10
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: pagos
+          image: us-central1-docker.pkg.dev/sa-p6-202006633/p10/tienda:1.0.0
+          command: ["python", "pagos.py"]
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - { name: OTEL_SERVICE_NAME, value: pagos }
+            - { name: VERSION, value: "v1" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.observabilidad.svc:4317" }
+            - { name: FALLA_PORCENTAJE, value: "0" }
+            - { name: LATENCIA_EXTRA_MS, value: "0" }
+          readinessProbe:
+            httpGet: { path: /salud, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /salud, port: http }
+            initialDelaySeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pagos
+  namespace: produccion
+  labels: { app: pagos }
+spec:
+  selector: { app: pagos }
+  ports:
+    - { name: http, port: 8080, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventario
+  namespace: produccion
+  labels:
+    app: inventario
+    app.kubernetes.io/part-of: tienda-p10
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: inventario }
+  template:
+    metadata:
+      labels:
+        app: inventario
+        app.kubernetes.io/part-of: tienda-p10
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: inventario
+          image: us-central1-docker.pkg.dev/sa-p6-202006633/p10/tienda:1.0.0
+          command: ["python", "inventario.py"]
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - { name: OTEL_SERVICE_NAME, value: inventario }
+            - { name: VERSION, value: "v1" }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://otel-collector.observabilidad.svc:4317" }
+            - { name: FALLA_PORCENTAJE, value: "0" }
+          readinessProbe:
+            httpGet: { path: /salud, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /salud, port: http }
+            initialDelaySeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventario
+  namespace: produccion
+  labels: { app: inventario }
+spec:
+  selector: { app: inventario }
+  ports:
+    - { name: http, port: 8080, targetPort: http }

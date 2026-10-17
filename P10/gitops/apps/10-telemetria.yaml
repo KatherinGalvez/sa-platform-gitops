@@ -1,0 +1,21 @@
+# Ola 1: registros (Loki), trazas (Tempo) y el Collector de OpenTelemetry que
+# recibe las trazas de los servicios y recoge sus registros JSON de los nodos.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: telemetria
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/KatherinGalvez/sa-platform-gitops.git
+    targetRevision: main
+    path: P10/gitops/observabilidad/telemetria
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observabilidad
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

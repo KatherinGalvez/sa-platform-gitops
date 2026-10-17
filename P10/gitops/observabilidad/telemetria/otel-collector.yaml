@@ -1,0 +1,139 @@
+# OpenTelemetry Collector (DaemonSet, uno por nodo).
+#   traces: los servicios envian OTLP/gRPC a otel-collector.observabilidad:4317
+#           -> Tempo
+#   logs:   lee del nodo los registros JSON de los pods de "produccion"
+#           (/var/log/pods), extrae trace_id/span_id/level -> Loki (OTLP)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: observabilidad
+data:
+  config.yaml: |
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      filelog:
+        include: [/var/log/pods/produccion_*/*/*.log]
+        start_at: end
+        include_file_path: true
+        operators:
+          # Formato CRI del nodo -> cuerpo + k8s.namespace/pod/container
+          - type: container
+            id: contenedor
+          # El cuerpo es el JSON que escribe la aplicacion
+          - type: json_parser
+            id: json
+            if: 'body matches "^\\{"'
+            parse_from: body
+            parse_to: attributes
+            on_error: send_quiet
+            severity:
+              parse_from: attributes.level
+              on_error: send_quiet
+          - type: trace_parser
+            if: 'attributes.trace_id != nil'
+            trace_id:
+              parse_from: attributes.trace_id
+            span_id:
+              parse_from: attributes.span_id
+            on_error: send_quiet
+    processors:
+      memory_limiter:
+        check_interval: 5s
+        limit_percentage: 80
+        spike_limit_percentage: 20
+      batch:
+        timeout: 2s
+      transform/servicio:
+        error_mode: ignore
+        log_statements:
+          - context: resource
+            statements:
+              - set(attributes["service.name"], attributes["k8s.container.name"]) where attributes["service.name"] == nil
+    exporters:
+      otlp/tempo:
+        endpoint: tempo.observabilidad.svc:4317
+        tls:
+          insecure: true
+      otlphttp/loki:
+        endpoint: http://loki.observabilidad.svc:3100/otlp
+        tls:
+          insecure: true
+    service:
+      extensions: [health_check]
+      telemetry:
+        logs:
+          level: warn
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp/tempo]
+        logs:
+          receivers: [filelog]
+          processors: [memory_limiter, transform/servicio, batch]
+          exporters: [otlphttp/loki]
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector
+  namespace: observabilidad
+  labels: { app: otel-collector }
+spec:
+  selector:
+    matchLabels: { app: otel-collector }
+  template:
+    metadata:
+      labels: { app: otel-collector }
+      annotations:
+        configmap/version: "1"
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.163.1
+          args: ["--config=/conf/config.yaml"]
+          # Root solo para leer /var/log/pods del nodo (solo lectura)
+          securityContext:
+            runAsUser: 0
+            readOnlyRootFilesystem: true
+          ports:
+            - { name: otlp-grpc, containerPort: 4317 }
+            - { name: otlp-http, containerPort: 4318 }
+            - { name: salud, containerPort: 13133 }
+          readinessProbe:
+            httpGet: { path: /, port: salud }
+          livenessProbe:
+            httpGet: { path: /, port: salud }
+            initialDelaySeconds: 15
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - { name: config, mountPath: /conf }
+            - { name: varlogpods, mountPath: /var/log/pods, readOnly: true }
+      volumes:
+        - name: config
+          configMap: { name: otel-collector-config }
+        - name: varlogpods
+          hostPath: { path: /var/log/pods }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: observabilidad
+  labels: { app: otel-collector }
+spec:
+  selector: { app: otel-collector }
+  ports:
+    - { name: otlp-grpc, port: 4317, targetPort: otlp-grpc }
+    - { name: otlp-http, port: 4318, targetPort: otlp-http }

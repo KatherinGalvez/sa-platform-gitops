@@ -1,0 +1,31 @@
+# Generador de trafico: ~5 pedidos por segundo contra el Service pedidos
+# (que reparte entre pods estables y canary). Sin trafico no hay SLI.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generador
+  namespace: produccion
+  labels: { app: generador }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: generador }
+  template:
+    metadata:
+      labels: { app: generador }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: generador
+          image: us-central1-docker.pkg.dev/sa-p6-202006633/p10/tienda:1.0.0
+          command: ["python", "generador.py"]
+          env:
+            - { name: PEDIDOS_URL, value: "http://pedidos:8080" }
+            - { name: TASA, value: "5" }
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { memory: 128Mi }
+          securityContext:
+            allowPrivilegeEscalation: false

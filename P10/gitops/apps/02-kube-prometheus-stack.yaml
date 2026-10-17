@@ -1,0 +1,126 @@
+# Ola 0: metricas y tableros.
+#   Prometheus (operador) + Alertmanager + Grafana + kube-state-metrics + node-exporter.
+# Grafana trae los TRES origenes de datos: Prometheus (metricas), Loki (registros)
+# y Tempo (trazas), enlazados entre si por trace_id.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/prometheus-community/charts
+    chart: kube-prometheus-stack
+    targetRevision: 92.10.1
+    helm:
+      releaseName: kps
+      valuesObject:
+        fullnameOverride: kps
+        crds:
+          enabled: true
+        # Las reglas propias (SLO) estan en observabilidad/slo; las del chart no
+        # se usan para no mezclar alertas ajenas al servicio.
+        defaultRules:
+          create: false
+        kubeEtcd: { enabled: false }
+        kubeControllerManager: { enabled: false }
+        kubeScheduler: { enabled: false }
+        kubeProxy: { enabled: false }
+        prometheusOperator:
+          admissionWebhooks:
+            enabled: false
+          tls:
+            enabled: false
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+        prometheus:
+          prometheusSpec:
+            # Leer PodMonitor / ServiceMonitor / PrometheusRule de cualquier namespace
+            podMonitorSelectorNilUsesHelmValues: false
+            serviceMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            probeSelectorNilUsesHelmValues: false
+            scrapeInterval: 15s
+            evaluationInterval: 15s
+            retention: 3d
+            resources:
+              requests: { cpu: 200m, memory: 1Gi }
+              limits: { memory: 3Gi }
+        alertmanager:
+          alertmanagerSpec:
+            resources:
+              requests: { cpu: 10m, memory: 64Mi }
+              limits: { memory: 256Mi }
+        grafana:
+          admin:
+            existingSecret: grafana-admin
+            userKey: admin-user
+            passwordKey: admin-password
+          persistence:
+            enabled: false
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 512Mi }
+          sidecar:
+            dashboards:
+              enabled: true
+              label: grafana_dashboard
+              labelValue: "1"
+              searchNamespace: ALL
+          additionalDataSources:
+            - name: Loki
+              uid: loki
+              type: loki
+              access: proxy
+              url: http://loki.observabilidad.svc:3100
+              jsonData:
+                maxLines: 1000
+                # De un registro a su traza: el trace_id del JSON abre Tempo
+                derivedFields:
+                  - name: trace_id
+                    matcherRegex: '"trace_id": "([a-f0-9]{32})"'
+                    url: '$${__value.raw}'
+                    datasourceUid: tempo
+            - name: Tempo
+              uid: tempo
+              type: tempo
+              access: proxy
+              url: http://tempo.observabilidad.svc:3200
+              jsonData:
+                # De una traza a sus registros en Loki
+                tracesToLogsV2:
+                  datasourceUid: loki
+                  spanStartTimeShift: "-5m"
+                  spanEndTimeShift: "5m"
+                  filterByTraceID: true
+                  customQuery: true
+                  query: '{k8s_namespace_name="produccion"} | trace_id="$${__trace.traceId}"'
+                tracesToMetrics:
+                  datasourceUid: prometheus
+                serviceMap:
+                  datasourceUid: prometheus
+                nodeGraph:
+                  enabled: true
+                lokiSearch:
+                  datasourceUid: loki
+        kube-state-metrics:
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 256Mi }
+        prometheus-node-exporter:
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observabilidad
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    retry:
+      limit: 10
+      backoff: { duration: 15s, factor: 2, maxDuration: 3m }

@@ -1,0 +1,17 @@
+# ArgoCD aplica este directorio con Kustomize: el tablero se versiona como JSON
+# (tablero-p10.json, exportable/importable en Grafana) y se publica como
+# ConfigMap con la etiqueta que lee el sidecar de Grafana.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: observabilidad
+resources:
+  - podmonitor.yaml
+  - reglas-slo.yaml
+configMapGenerator:
+  - name: tablero-p10
+    files:
+      - tablero-p10.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
